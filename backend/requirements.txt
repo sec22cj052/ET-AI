@@ -1,0 +1,13 @@
+fastapi
+uvicorn[standard]
+langchain
+langchain-google-genai
+voyageai
+asyncpg
+pgvector
+pydantic
+python-dotenv
+python-multipart
+pdfplumber
+pandas
+openpyxl

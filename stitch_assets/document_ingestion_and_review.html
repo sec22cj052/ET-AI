@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Industrial Knowledge Platform - Document Ingestion</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-dim": "#d3daef",
+                        "on-error-container": "#93000a",
+                        "on-primary-fixed-variant": "#003ea8",
+                        "error": "#ba1a1a",
+                        "on-primary-fixed": "#00174b",
+                        "surface": "#f9f9ff",
+                        "error-container": "#ffdad6",
+                        "primary": "#004ac6",
+                        "surface-tint": "#0053db",
+                        "on-tertiary-container": "#e0fb9d",
+                        "on-error": "#ffffff",
+                        "on-background": "#141b2b",
+                        "surface-container-highest": "#dce2f7",
+                        "on-primary-container": "#eeefff",
+                        "primary-container": "#2563eb",
+                        "on-tertiary-fixed": "#151f00",
+                        "background": "#f9f9ff",
+                        "secondary": "#775a00",
+                        "on-tertiary": "#ffffff",
+                        "surface-container": "#e9edff",
+                        "secondary-fixed-dim": "#f6be0a",
+                        "tertiary-container": "#5f7527",
+                        "inverse-on-surface": "#edf0ff",
+                        "primary-fixed-dim": "#b4c5ff",
+                        "primary-fixed": "#dbe1ff",
+                        "tertiary-fixed": "#d2ed90",
+                        "inverse-surface": "#293040",
+                        "on-secondary-fixed-variant": "#5a4300",
+                        "secondary-container": "#fdc416",
+                        "on-primary": "#ffffff",
+                        "surface-container-high": "#e1e8fd",
+                        "on-surface": "#141b2b",
+                        "secondary-fixed": "#ffdf98",
+                        "outline-variant": "#c3c6d7",
+                        "on-secondary": "#ffffff",
+                        "on-surface-variant": "#434655",
+                        "tertiary": "#475c0f",
+                        "tertiary-fixed-dim": "#b6d177",
+                        "on-tertiary-fixed-variant": "#394d00",
+                        "surface-bright": "#f9f9ff",
+                        "inverse-primary": "#b4c5ff",
+                        "on-secondary-fixed": "#251a00",
+                        "surface-variant": "#dce2f7"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "base": "4px",
+                        "container-max": "1440px",
+                        "margin": "24px",
+                        "gutter": "16px"
+                    },
+                    "fontFamily": {
+                        "label-sm": ["Inter"],
+                        "headline-xl-mobile": ["Inter"],
+                        "label-md": ["Inter"],
+                        "headline-lg": ["Inter"],
+                        "headline-xl": ["Inter"],
+                        "body-md": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "headline-md": ["Inter"]
+                    },
+                    "fontSize": {
+                        "label-sm": ["11px", {"lineHeight": "14px", "fontWeight": "500"}],
+                        "headline-xl-mobile": ["28px", {"lineHeight": "34px", "fontWeight": "700"}],
+                        "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                        "headline-lg": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                        "headline-xl": ["36px", {"lineHeight": "44px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                        "headline-md": ["18px", {"lineHeight": "28px", "fontWeight": "600"}]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f9f9ff;
+            background-image: radial-gradient(#dce2f7 1px, transparent 1px);
+            background-size: 16px 16px;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            display: inline-block;
+            vertical-align: middle;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #c3c6d7;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body class="text-on-surface overflow-hidden h-screen flex flex-col">
+<!-- TopNavBar -->
+<header class="bg-surface dark:bg-surface-container-highest border-b border-outline-variant dark:border-outline flex justify-between items-center w-full h-16 px-margin z-50 fixed top-0 docked full-width">
+<div class="flex items-center gap-4">
+<span class="text-headline-md font-headline-md font-bold text-primary dark:text-primary-fixed">Industrial Knowledge Platform</span>
+</div>
+<div class="flex items-center gap-6">
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant">search</span>
+<input class="pl-10 pr-4 py-2 bg-surface-container-low border border-outline-variant rounded-sm text-body-md focus:outline-none focus:ring-1 focus:ring-primary w-64" placeholder="Search knowledge base..." type="text"/>
+</div>
+<div class="flex items-center gap-4">
+<button class="text-on-surface-variant hover:bg-surface-container-low p-2 transition-colors cursor-pointer active:scale-95 duration-150">
+<span class="material-symbols-outlined" data-icon="monitor_heart">monitor_heart</span>
+</button>
+<button class="text-on-surface-variant hover:bg-surface-container-low p-2 transition-colors cursor-pointer active:scale-95 duration-150">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+<button class="text-on-surface-variant hover:bg-surface-container-low p-2 transition-colors cursor-pointer active:scale-95 duration-150">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+</button>
+<div class="w-8 h-8 rounded-full bg-primary-container flex items-center justify-center text-on-primary-container font-bold text-label-md">
+                    JD
+                </div>
+</div>
+</div>
+</header>
+<div class="flex flex-1 pt-16 h-full overflow-hidden">
+<!-- SideNavBar -->
+<nav class="fixed left-0 top-0 h-full flex flex-col z-40 bg-surface-container-low dark:bg-surface-container-lowest border-r border-outline-variant dark:border-outline w-[240px] pt-20 pb-6 px-4">
+<div class="mb-8 px-2">
+<div class="flex items-center gap-3 mb-1">
+<div class="w-8 h-8 bg-primary rounded flex items-center justify-center">
+<span class="material-symbols-outlined text-white text-[20px]" data-icon="factory">factory</span>
+</div>
+<span class="font-headline-md text-headline-md font-bold text-primary">Industrial Hub</span>
+</div>
+<p class="text-label-md font-label-md text-on-surface-variant pl-11">Precision Engineering</p>
+</div>
+<div class="space-y-1 flex-1 overflow-y-auto custom-scrollbar">
+<button class="bg-secondary-container dark:bg-secondary-container text-on-secondary-container font-bold border-l-2 border-primary flex items-center gap-3 px-4 py-3 rounded-sm transition-all duration-200 w-full text-left">
+<span class="material-symbols-outlined" data-icon="upload_file">upload_file</span>
+<span class="font-label-md text-label-md">Document Ingestion</span>
+</button>
+<button class="text-on-surface-variant hover:bg-surface-container-high flex items-center gap-3 px-4 py-3 rounded-sm transition-all duration-200 w-full text-left">
+<span class="material-symbols-outlined" data-icon="smart_toy">smart_toy</span>
+<span class="font-label-md text-label-md">Expert Copilot</span>
+</button>
+<button class="text-on-surface-variant hover:bg-surface-container-high flex items-center gap-3 px-4 py-3 rounded-sm transition-all duration-200 w-full text-left">
+<span class="material-symbols-outlined" data-icon="account_tree">account_tree</span>
+<span class="font-label-md text-label-md">Knowledge Graph</span>
+</button>
+<button class="text-on-surface-variant hover:bg-surface-container-high flex items-center gap-3 px-4 py-3 rounded-sm transition-all duration-200 w-full text-left">
+<span class="material-symbols-outlined" data-icon="description">description</span>
+<span class="font-label-md text-label-md">Document Library</span>
+</button>
+<div class="pt-6">
+<button class="w-full bg-primary text-white py-3 px-4 rounded-sm flex items-center justify-center gap-2 font-bold hover:bg-opacity-90 active:scale-95 transition-all">
+<span class="material-symbols-outlined" data-icon="add">add</span>
+<span class="font-label-md text-label-md">New Analysis</span>
+</button>
+</div>
+</div>
+<div class="mt-auto pt-6 border-t border-outline-variant space-y-1">
+<button class="text-on-surface-variant hover:bg-surface-container-high flex items-center gap-3 px-4 py-2 rounded-sm transition-all duration-200 w-full text-left">
+<span class="material-symbols-outlined text-[18px]" data-icon="analytics">analytics</span>
+<span class="font-label-md text-label-md">System Health</span>
+</button>
+<button class="text-on-surface-variant hover:bg-surface-container-high flex items-center gap-3 px-4 py-2 rounded-sm transition-all duration-200 w-full text-left">
+<span class="material-symbols-outlined text-[18px]" data-icon="help">help</span>
+<span class="font-label-md text-label-md">Support</span>
+</button>
+</div>
+</nav>
+<!-- Main Workspace -->
+<main class="ml-[240px] flex-1 flex overflow-hidden">
+<!-- Left Side: Document List -->
+<aside class="w-[380px] bg-white border-r border-outline-variant flex flex-col h-full z-10">
+<div class="p-margin border-b border-outline-variant flex justify-between items-center bg-white">
+<h2 class="font-headline-md text-headline-md text-on-surface">Queue</h2>
+<div class="flex gap-1">
+<button class="p-1.5 hover:bg-surface-container-low rounded"><span class="material-symbols-outlined text-[20px] text-on-surface-variant">filter_list</span></button>
+<button class="p-1.5 hover:bg-surface-container-low rounded"><span class="material-symbols-outlined text-[20px] text-on-surface-variant">sync</span></button>
+</div>
+</div>
+<div class="flex-1 overflow-y-auto custom-scrollbar p-2 space-y-2 bg-surface-container-lowest">
+<!-- List Item: Active -->
+<div class="p-3 bg-white border-l-4 border-primary shadow-sm rounded-sm transition-all hover:shadow-md cursor-pointer group">
+<div class="flex justify-between items-start mb-2">
+<span class="font-bold text-body-md text-primary truncate max-w-[240px]">Pump-101_Maintenance_Procedure.pdf</span>
+<span class="px-1.5 py-0.5 rounded-sm bg-secondary-container text-on-secondary-container text-[10px] font-bold">PENDING REVIEW</span>
+</div>
+<div class="flex items-center gap-4 text-on-surface-variant text-[11px]">
+<div class="flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">calendar_today</span> Oct 12, 2023</div>
+<div class="flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">description</span> 4.2 MB</div>
+</div>
+</div>
+<!-- List Item: Processing -->
+<div class="p-3 bg-surface border-l-4 border-surface-dim opacity-70 rounded-sm transition-all hover:bg-white cursor-not-allowed">
+<div class="flex justify-between items-start mb-2">
+<span class="font-bold text-body-md text-on-surface-variant truncate max-w-[240px]">Safety_Protocol_v3.docx</span>
+<span class="px-1.5 py-0.5 rounded-sm bg-surface-container-highest text-on-surface-variant text-[10px] font-bold">PROCESSING</span>
+</div>
+<div class="w-full bg-outline-variant h-1 rounded-full mt-3 overflow-hidden">
+<div class="bg-primary h-full w-2/3 animate-[progress_2s_ease-in-out_infinite]"></div>
+</div>
+</div>
+<!-- List Item: Approved -->
+<div class="p-3 bg-surface border-l-4 border-tertiary-container rounded-sm transition-all hover:bg-white cursor-pointer group">
+<div class="flex justify-between items-start mb-2">
+<span class="font-bold text-body-md text-on-surface-variant truncate max-w-[240px]">Compressor_Schematic_A1.pdf</span>
+<div class="flex items-center gap-1 px-1.5 py-0.5 rounded-sm bg-tertiary-fixed text-on-tertiary-fixed-variant text-[10px] font-bold uppercase">
+<span class="material-symbols-outlined text-[12px]" style="font-variation-settings: 'FILL' 1;">check_circle</span> Approved
+                            </div>
+</div>
+<div class="flex items-center gap-4 text-on-surface-variant text-[11px]">
+<div class="flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">calendar_today</span> Oct 10, 2023</div>
+<div class="flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">person</span> R. Thompson</div>
+</div>
+</div>
+</div>
+</aside>
+<!-- Right Side: HITL Interface -->
+<section class="flex-1 flex flex-col h-full bg-white">
+<!-- Metadata Header -->
+<header class="p-margin border-b border-outline-variant bg-white flex justify-between items-end">
+<div>
+<div class="flex items-center gap-2 mb-1">
+<span class="material-symbols-outlined text-primary">picture_as_pdf</span>
+<h1 class="font-headline-lg text-headline-lg text-on-background">Pump-101_Maintenance_Procedure.pdf</h1>
+</div>
+<div class="flex items-center gap-4">
+<span class="text-label-md font-label-md text-on-surface-variant px-2 py-0.5 border border-outline-variant rounded-sm uppercase tracking-wider">Manual</span>
+<span class="text-body-md text-on-surface-variant">Uploaded by <span class="font-semibold">System Agent</span> • Yesterday, 14:32</span>
+</div>
+</div>
+<div class="flex gap-3">
+<button class="px-4 py-2 border border-outline text-on-surface-variant font-label-md rounded-sm hover:bg-surface-container-low flex items-center gap-2 transition-colors">
+<span class="material-symbols-outlined" data-icon="visibility">visibility</span> Preview PDF
+                        </button>
+</div>
+</header>
+<!-- HITL Workspace -->
+<div class="flex-1 overflow-y-auto custom-scrollbar p-margin grid grid-cols-12 gap-gutter">
+<!-- Left Column: Extraction Table -->
+<div class="col-span-8 flex flex-col gap-6">
+<div class="bg-white border border-outline-variant rounded-sm shadow-sm overflow-hidden">
+<div class="px-4 py-3 bg-surface-container-low border-b border-outline-variant flex justify-between items-center">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">dataset</span>
+<h3 class="font-headline-md text-headline-md">Entity Extraction</h3>
+</div>
+<span class="text-label-sm text-on-surface-variant uppercase tracking-tighter">Confidence: 94.2%</span>
+</div>
+<table class="w-full text-left text-body-md border-collapse">
+<thead>
+<tr class="bg-surface-container-lowest border-b border-outline-variant">
+<th class="px-4 py-3 font-label-md text-on-surface-variant uppercase">Entity</th>
+<th class="px-4 py-3 font-label-md text-on-surface-variant uppercase">Classification</th>
+<th class="px-4 py-3 font-label-md text-on-surface-variant uppercase">Details</th>
+<th class="px-4 py-3 font-label-md text-on-surface-variant uppercase text-center">Ref</th>
+<th class="px-4 py-3 font-label-md text-on-surface-variant uppercase text-right w-16">Status</th>
+</tr>
+</thead>
+<tbody>
+<tr class="border-b border-outline-variant hover:bg-surface-container-low transition-colors">
+<td class="px-4 py-4 font-bold text-on-background">Pump-101</td>
+<td class="px-4 py-4"><span class="bg-surface-container-high px-2 py-0.5 text-[11px] font-bold rounded-sm">EQUIPMENT</span></td>
+<td class="px-4 py-4 text-on-surface-variant text-[13px]">Centrifugal Pump • Type B</td>
+<td class="px-4 py-4 text-center"><button class="text-primary hover:underline font-semibold">p.14</button></td>
+<td class="px-4 py-4 text-right">
+<span class="material-symbols-outlined text-tertiary text-[20px]" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+</td>
+</tr>
+<tr class="border-b border-outline-variant bg-surface-container-lowest hover:bg-surface-container-low transition-colors">
+<td class="px-4 py-4 font-bold text-on-background">Mechanical Seal</td>
+<td class="px-4 py-4"><span class="bg-surface-container-high px-2 py-0.5 text-[11px] font-bold rounded-sm">COMPONENT</span></td>
+<td class="px-4 py-4 text-on-surface-variant text-[13px]">Manufacturer: FlowServe • SKU: 9920-X</td>
+<td class="px-4 py-4 text-center"><button class="text-primary hover:underline font-semibold">p.18</button></td>
+<td class="px-4 py-4 text-right">
+<span class="material-symbols-outlined text-on-surface-variant text-[20px]">lock</span>
+</td>
+</tr>
+<tr class="border-b border-outline-variant hover:bg-surface-container-low transition-colors">
+<td class="px-4 py-4 font-bold text-on-background">ISO 2858</td>
+<td class="px-4 py-4"><span class="bg-surface-container-high px-2 py-0.5 text-[11px] font-bold rounded-sm">SPECIFICATION</span></td>
+<td class="px-4 py-4 text-on-surface-variant text-[13px]">Dimensions and nominal duty point</td>
+<td class="px-4 py-4 text-center"><button class="text-primary hover:underline font-semibold">p.2</button></td>
+<td class="px-4 py-4 text-right">
+<span class="material-symbols-outlined text-secondary-container text-[20px]">error_outline</span>
+</td>
+</tr>
+<tr class="bg-surface-container-lowest hover:bg-surface-container-low transition-colors">
+<td class="px-4 py-4 font-bold text-on-background">Chevron Lubricants</td>
+<td class="px-4 py-4"><span class="bg-surface-container-high px-2 py-0.5 text-[11px] font-bold rounded-sm">MANUFACTURER</span></td>
+<td class="px-4 py-4 text-on-surface-variant text-[13px]">Recommended grease type: NLGI 2</td>
+<td class="px-4 py-4 text-center"><button class="text-primary hover:underline font-semibold">p.22</button></td>
+<td class="px-4 py-4 text-right">
+<span class="material-symbols-outlined text-on-surface-variant text-[20px]">lock</span>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<!-- Right Column: Text Chunks -->
+<div class="col-span-4 flex flex-col gap-4">
+<div class="flex items-center justify-between mb-2">
+<h3 class="font-headline-md text-headline-md">Text Chunks</h3>
+<button class="text-primary font-label-md flex items-center gap-1"><span class="material-symbols-outlined text-[18px]">add</span> Add Chunk</button>
+</div>
+<!-- Chunk Card: Editable -->
+<div class="bg-white border border-outline-variant p-4 rounded-sm shadow-sm relative group hover:border-primary transition-colors">
+<div class="flex justify-between items-center mb-3">
+<span class="bg-primary-container text-on-primary-container px-2 py-0.5 text-[10px] font-bold rounded-sm">PAGE 14</span>
+<button class="text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[18px]">edit</span>
+</button>
+</div>
+<p class="text-body-md text-on-surface line-clamp-4 italic">"The Pump-101 unit requires lubrication every 2,500 hours of operation. Ensure that the mechanical seal is inspected for leaks during each lubrication cycle to prevent catastrophic failure of the bearing assembly."</p>
+</div>
+<!-- Chunk Card: Locked -->
+<div class="bg-surface-container-low border border-outline-variant p-4 rounded-sm opacity-80 relative">
+<div class="flex justify-between items-center mb-3">
+<span class="bg-outline-variant text-on-surface-variant px-2 py-0.5 text-[10px] font-bold rounded-sm">PAGE 2</span>
+<span class="material-symbols-outlined text-on-surface-variant text-[18px]">lock</span>
+</div>
+<p class="text-body-md text-on-surface-variant line-clamp-4">"General safety precautions: Wear eye protection and high-visibility gear when operating near rotating equipment. Pump-101 operates at high pressure and temperature thresholds exceeding 120°C."</p>
+</div>
+<!-- Chunk Card: Flagged -->
+<div class="bg-white border-2 border-secondary-container p-4 rounded-sm shadow-sm relative">
+<div class="flex justify-between items-center mb-3">
+<span class="bg-secondary-container text-on-secondary-container px-2 py-0.5 text-[10px] font-bold rounded-sm">PAGE 22</span>
+<div class="flex gap-2">
+<button class="text-on-surface-variant hover:text-primary"><span class="material-symbols-outlined text-[18px]">edit</span></button>
+<button class="text-error"><span class="material-symbols-outlined text-[18px]">delete</span></button>
+</div>
+</div>
+<p class="text-body-md text-on-surface line-clamp-4">"Table 4-A: Suggested Lubricant Specs. Note that for arctic conditions, a synthetic base is required. Current extraction failed to parse table columns correctly."</p>
+<div class="mt-3 text-[11px] text-on-secondary-container font-bold flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">warning</span> Review suggested: Low confidence parse
+                            </div>
+</div>
+</div>
+</div>
+<!-- Action Bar -->
+<footer class="p-margin border-t border-outline-variant bg-surface flex justify-between items-center">
+<div class="flex items-center gap-4">
+<button class="px-5 py-2.5 bg-surface-container-highest text-on-surface border border-outline-variant font-bold rounded-sm flex items-center gap-2 hover:bg-surface-container-high transition-all active:scale-95">
+<span class="material-symbols-outlined" data-icon="lightbulb">lightbulb</span>
+                            Improve AI
+                        </button>
+<p class="text-body-md text-on-surface-variant italic">84% of entities reviewed. 3 tasks remaining.</p>
+</div>
+<div class="flex items-center gap-4">
+<button class="px-5 py-2.5 border border-outline text-on-surface-variant font-bold rounded-sm hover:bg-surface-container-low transition-all">
+                            Save Progress
+                        </button>
+<button class="px-8 py-2.5 bg-primary text-white font-bold rounded-sm flex items-center gap-2 hover:shadow-lg hover:shadow-primary/20 active:scale-95 transition-all">
+<span class="material-symbols-outlined">verified</span>
+                            Approve Document
+                        </button>
+</div>
+</footer>
+</section>
+</main>
+</div>
+<!-- Micro-interactions Script -->
+<script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const listItems = document.querySelectorAll('aside [class*="p-3"]');
+            listItems.forEach(item => {
+                item.addEventListener('click', () => {
+                    listItems.forEach(i => i.classList.remove('border-primary', 'bg-white', 'shadow-sm'));
+                    item.classList.add('border-primary', 'bg-white', 'shadow-sm');
+                });
+            });
+
+            // Feedback prompt micro-interaction
+            const improveBtn = document.querySelector('button:has([data-icon="lightbulb"])');
+            improveBtn.addEventListener('click', () => {
+                const feedback = prompt("How can we improve extraction for this document type?");
+                if (feedback) {
+                    alert("Thank you! Your feedback has been queued for the model training cycle.");
+                }
+            });
+        });
+    </script>
+</body></html>

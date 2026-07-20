@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Knowledge Graph Explorer | Industrial Hub</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-surface-variant": "#434655",
+                    "on-secondary-container": "#6d5200",
+                    "surface-bright": "#f9f9ff",
+                    "primary": "#2563eb", /* Action Blue as requested */
+                    "tertiary-container": "#5f7527",
+                    "on-secondary-fixed": "#251a00",
+                    "on-error-container": "#93000a",
+                    "on-primary": "#ffffff",
+                    "on-tertiary-fixed-variant": "#394d00",
+                    "inverse-primary": "#b4c5ff",
+                    "secondary-fixed-dim": "#f6be0a",
+                    "secondary-fixed": "#ffdf98",
+                    "on-tertiary-container": "#e0fb9d",
+                    "surface-container-highest": "#dce2f7",
+                    "on-background": "#141b2b",
+                    "tertiary": "#475c0f",
+                    "error-container": "#ffdad6",
+                    "surface-container-lowest": "#ffffff",
+                    "surface-container-high": "#e1e8fd",
+                    "on-primary-fixed": "#00174b",
+                    "on-primary-fixed-variant": "#003ea8",
+                    "surface-container-low": "#f8fafc", /* Cleaner light gray */
+                    "on-tertiary-fixed": "#151f00",
+                    "on-secondary-fixed-variant": "#5a4300",
+                    "tertiary-fixed": "#d2ed90",
+                    "surface-tint": "#2563eb",
+                    "on-error": "#ffffff",
+                    "primary-container": "#2563eb",
+                    "secondary-container": "#f1f5f9", /* Neutral container */
+                    "inverse-on-surface": "#edf0ff",
+                    "primary-fixed": "#dbe1ff",
+                    "error": "#ba1a1a",
+                    "outline-variant": "#e2e8f0", /* Refined subtle border */
+                    "surface-container": "#f1f5f9",
+                    "background": "#ffffff",
+                    "surface-variant": "#f8fafc",
+                    "inverse-surface": "#0f172a",
+                    "on-tertiary": "#ffffff",
+                    "surface-dim": "#f1f5f9",
+                    "primary-fixed-dim": "#b4c5ff",
+                    "on-surface": "#0f172a",
+                    "secondary": "#475569",
+                    "surface": "#ffffff",
+                    "on-secondary": "#ffffff",
+                    "on-primary-container": "#ffffff",
+                    "tertiary-fixed-dim": "#b6d177",
+                    "outline": "#cbd5e1"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.125rem",
+                    "lg": "0.25rem",
+                    "xl": "0.5rem",
+                    "full": "0.75rem"
+            },
+            "spacing": {
+                    "base": "4px",
+                    "margin": "24px",
+                    "gutter": "16px",
+                    "container-max": "1440px"
+            },
+            "fontFamily": {
+                    "headline-xl-mobile": ["Inter"],
+                    "headline-lg": ["Inter"],
+                    "body-md": ["Inter"],
+                    "label-sm": ["Inter"],
+                    "label-md": ["Inter"],
+                    "headline-xl": ["Inter"],
+                    "headline-md": ["Inter"],
+                    "body-lg": ["Inter"]
+            },
+            "fontSize": {
+                    "headline-xl-mobile": ["28px", {"lineHeight": "34px", "fontWeight": "700"}],
+                    "headline-lg": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                    "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                    "label-sm": ["11px", {"lineHeight": "14px", "fontWeight": "500"}],
+                    "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.02em", "fontWeight": "600"}],
+                    "headline-xl": ["36px", {"lineHeight": "44px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "headline-md": ["16px", {"lineHeight": "24px", "fontWeight": "600"}],
+                    "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #ffffff;
+            /* Refined subtle dot grid */
+            background-image: radial-gradient(#cbd5e1 0.75px, transparent 0.75px);
+            background-size: 24px 24px;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 20;
+        }
+        .node-active {
+            stroke: #2563eb;
+            stroke-width: 2px;
+            filter: none;
+        }
+        .graph-line {
+            stroke: #e2e8f0;
+            stroke-width: 1;
+        }
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 2px; }
+    </style>
+</head>
+<body class="overflow-hidden text-on-surface">
+<!-- Sidebar Navigation -->
+<aside class="fixed left-0 top-0 h-full flex flex-col z-40 bg-white border-r border-outline-variant w-[260px]">
+<div class="p-8">
+<div class="flex items-center gap-3 mb-1">
+<div class="w-7 h-7 bg-on-surface flex items-center justify-center text-white rounded-[2px]">
+<span class="material-symbols-outlined text-[18px]" data-icon="precision_manufacturing">precision_manufacturing</span>
+</div>
+<div>
+<h1 class="font-bold text-[15px] tracking-tight text-on-surface leading-tight">Industrial Hub</h1>
+<p class="text-[9px] uppercase tracking-widest text-secondary font-semibold">Engineered Precision</p>
+</div>
+</div>
+</div>
+<nav class="flex-1 px-4 space-y-1">
+<div class="px-4 py-2 mb-2">
+<p class="text-[10px] font-bold text-secondary uppercase tracking-widest">Workspace</p>
+</div>
+<a class="flex items-center gap-3 px-4 py-2.5 rounded-sm transition-all duration-200 text-secondary hover:bg-surface-dim hover:text-on-surface" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="upload_file">upload_file</span>
+<span class="font-label-md text-label-md">Ingestion</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-2.5 rounded-sm transition-all duration-200 text-secondary hover:bg-surface-dim hover:text-on-surface" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="smart_toy">smart_toy</span>
+<span class="font-label-md text-label-md">Expert Copilot</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-2.5 rounded-sm transition-all duration-200 bg-surface-dim text-primary font-semibold" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="account_tree">account_tree</span>
+<span class="font-label-md text-label-md">Knowledge Graph</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-2.5 rounded-sm transition-all duration-200 text-secondary hover:bg-surface-dim hover:text-on-surface" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="description">description</span>
+<span class="font-label-md text-label-md">Library</span>
+</a>
+</nav>
+<div class="mt-auto border-t border-outline-variant p-4 space-y-1">
+<button class="w-full bg-primary text-on-primary py-2.5 rounded-sm font-label-md text-label-md hover:opacity-90 transition-opacity mb-4">
+            New Analysis
+        </button>
+<a class="flex items-center gap-3 px-4 py-2 rounded-sm text-secondary hover:bg-surface-dim transition-all" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="analytics">analytics</span>
+<span class="font-label-md text-label-md">System Health</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-2 rounded-sm text-secondary hover:bg-surface-dim transition-all" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="help">help</span>
+<span class="font-label-md text-label-md">Support</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-2 rounded-sm text-error/80 hover:bg-error/5 transition-all mt-2" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="logout">logout</span>
+<span class="font-label-md text-label-md">Logout</span>
+</a>
+</div>
+</aside>
+<!-- Main Workspace -->
+<main class="ml-[260px] h-screen relative bg-white">
+<!-- Top Bar -->
+<header class="flex justify-between items-center w-full h-16 px-margin z-50 bg-white border-b border-outline-variant fixed top-0 left-[260px] right-0 max-w-[calc(100%-260px)]">
+<div class="flex items-center gap-4 flex-1">
+<div class="relative w-80">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-secondary text-[18px]" data-icon="search">search</span>
+<input class="w-full h-9 pl-10 pr-4 bg-surface-dim border-none rounded-sm text-body-md focus:ring-1 focus:ring-primary/30 transition-all placeholder:text-secondary/60" placeholder="Search system knowledge..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-1">
+<button class="p-2 text-secondary hover:text-on-surface transition-colors">
+<span class="material-symbols-outlined" data-icon="monitor_heart">monitor_heart</span>
+</button>
+<button class="p-2 text-secondary hover:text-on-surface transition-colors relative">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+<span class="absolute top-2.5 right-2.5 w-1.5 h-1.5 bg-error rounded-full"></span>
+</button>
+<button class="p-2 text-secondary hover:text-on-surface transition-colors">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+</button>
+<div class="ml-4 flex items-center gap-3">
+<div class="w-8 h-8 rounded-full border border-outline-variant overflow-hidden bg-surface-dim">
+<img class="w-full h-full object-cover grayscale opacity-90" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAgLgcYzD9dLpVBLTA0D-MQXbgGnrH34dY5FucZ2pZoogcxTG_OZMpiDmMhaPV5yfi_CZfzCwMp70t4F-XTiWQ-UuTm2zvfWik5bD69we35-9Jvo_etsvDve18lwygBmL5f2hs0UK56_Ar0IiZuV7PHfKrtN0UQaPICfvaR3YcRiznTdjJrA7gndCNKHUTEQmy1gjs_tALhJ9OIZr1xWR1648057pJw9NK19z_oUUvVJ8h1_6RFEdnZ-Q"/>
+</div>
+</div>
+</div>
+</header>
+<!-- Graph Canvas Area -->
+<div class="w-full h-full pt-16 flex items-center justify-center cursor-grab active:cursor-grabbing overflow-hidden" id="graph-canvas">
+<svg class="pointer-events-none" height="800" viewbox="0 0 1200 800" width="1200">
+<!-- Connections -->
+<line class="graph-line" x1="600" x2="400" y1="400" y2="250"></line>
+<line class="graph-line" x1="600" x2="800" y1="400" y2="250"></line>
+<line class="graph-line" x1="600" x2="600" y1="400" y2="600"></line>
+<line class="graph-line" x1="400" x2="250" y1="250" y2="150"></line>
+<line class="graph-line" x1="800" x2="950" y1="250" y2="350"></line>
+<!-- Relationship Annotations -->
+<text class="fill-secondary font-label-sm text-[9px] uppercase tracking-wider" transform="rotate(-35, 480, 310)" x="480" y="310">maintained_by</text>
+<text class="fill-secondary font-label-sm text-[9px] uppercase tracking-wider" transform="rotate(35, 680, 310)" x="680" y="310">has_part</text>
+<text class="fill-secondary font-label-sm text-[9px] uppercase tracking-wider" x="610" y="500">governed_by</text>
+<!-- Nodes -->
+<!-- Equipment -->
+<g class="pointer-events-auto cursor-pointer group" onclick="selectNode('Turbine-042-X')">
+<circle class="node-active fill-on-surface" cx="600" cy="400" r="32"></circle>
+<text class="font-label-md fill-on-surface font-bold text-[12px]" text-anchor="middle" x="600" y="455">Turbine-042-X</text>
+<text class="fill-white material-symbols-outlined" style="font-size: 20px;" text-anchor="middle" x="600" y="407">settings_slow_motion</text>
+</g>
+<!-- Standards -->
+<g class="pointer-events-auto cursor-pointer" onclick="selectNode('ISO-9001:2023')">
+<rect class="fill-secondary" height="32" rx="2" width="90" x="555" y="584"></rect>
+<text class="font-label-sm fill-secondary text-[11px]" text-anchor="middle" x="600" y="635">ISO-9001:2023</text>
+<text class="fill-white material-symbols-outlined" style="font-size: 16px;" text-anchor="middle" x="600" y="605">gavel</text>
+</g>
+<!-- Component -->
+<g class="pointer-events-auto cursor-pointer" onclick="selectNode('Fuel Injector A')">
+<circle class="fill-outline" cx="400" cy="250" r="24"></circle>
+<text class="font-label-sm fill-secondary text-[11px]" text-anchor="middle" x="400" y="295">Fuel Injector A</text>
+</g>
+<!-- Sensor -->
+<g class="pointer-events-auto cursor-pointer" onclick="selectNode('Thermal Sensor')">
+<circle class="fill-outline" cx="800" cy="250" r="24"></circle>
+<text class="font-label-sm fill-secondary text-[11px]" text-anchor="middle" x="800" y="295">Thermal Sensor</text>
+</g>
+<!-- Work Order -->
+<g class="pointer-events-auto cursor-pointer" onclick="selectNode('WO-9882-M')">
+<path class="fill-secondary" d="M250,130 L274,154 L250,178 L226,154 Z"></path>
+<text class="font-label-sm fill-secondary text-[11px]" text-anchor="middle" x="250" y="195">WO-9882-M</text>
+</g>
+</svg>
+<!-- Toolbars -->
+<div class="absolute bottom-10 left-10 flex flex-col gap-4">
+<div class="bg-white border border-outline-variant p-1.5 flex flex-col gap-1 rounded-sm shadow-sm">
+<button class="p-2 hover:bg-surface-dim text-secondary transition-colors rounded-sm">
+<span class="material-symbols-outlined" data-icon="add">add</span>
+</button>
+<div class="h-[1px] bg-outline-variant mx-1"></div>
+<button class="p-2 hover:bg-surface-dim text-secondary transition-colors rounded-sm">
+<span class="material-symbols-outlined" data-icon="remove">remove</span>
+</button>
+<div class="h-[1px] bg-outline-variant mx-1"></div>
+<button class="p-2 hover:bg-surface-dim text-secondary transition-colors rounded-sm">
+<span class="material-symbols-outlined" data-icon="filter_center_focus">filter_center_focus</span>
+</button>
+</div>
+<div class="bg-white border border-outline-variant p-3 flex gap-6 rounded-sm shadow-sm items-center">
+<div class="flex items-center gap-3 pr-6 border-r border-outline-variant">
+<span class="text-[10px] font-bold text-secondary uppercase tracking-widest">Filters</span>
+<div class="flex gap-2">
+<span class="w-2.5 h-2.5 rounded-full bg-on-surface" title="Equipment"></span>
+<span class="w-2.5 h-2.5 rounded-full bg-outline" title="Component"></span>
+<span class="w-2.5 h-2.5 rounded-full bg-secondary" title="Process"></span>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px] text-secondary" data-icon="layers">layers</span>
+<select class="bg-transparent text-[11px] font-bold text-on-surface uppercase tracking-wider border-none focus:ring-0 cursor-pointer p-0">
+<option>Structural View</option>
+<option>Maintenance Path</option>
+<option>Operational Graph</option>
+</select>
+</div>
+</div>
+</div>
+</div>
+<!-- Detail Side Panel -->
+<aside class="fixed right-0 top-16 h-[calc(100vh-64px)] w-[380px] bg-white border-l border-outline-variant z-40 translate-x-full transition-transform duration-400 ease-in-out shadow-2xl flex flex-col" id="detail-panel">
+<div class="p-8 border-b border-outline-variant flex justify-between items-start bg-surface-dim/30">
+<div>
+<div class="flex items-center gap-2 mb-3">
+<span class="px-2 py-0.5 bg-on-surface text-white font-bold text-[9px] uppercase tracking-widest rounded-[2px]">Equipment</span>
+<span class="px-2 py-0.5 border border-outline text-secondary font-bold text-[9px] uppercase tracking-widest rounded-[2px]">System Active</span>
+</div>
+<h2 class="text-headline-md font-bold text-on-surface leading-tight mb-1" id="detail-title">Turbine-042-X</h2>
+<p class="text-[13px] text-secondary font-medium uppercase tracking-tight">Main Propulsion Assembly</p>
+</div>
+<button class="p-1 hover:bg-surface-dim transition-colors rounded-sm text-secondary" onclick="closePanel()">
+<span class="material-symbols-outlined" data-icon="close">close</span>
+</button>
+</div>
+<div class="flex-1 overflow-y-auto p-8 custom-scrollbar space-y-10">
+<!-- Analytics Overview -->
+<div class="grid grid-cols-2 gap-4">
+<div class="p-4 bg-surface-dim rounded-sm border border-outline-variant/50">
+<p class="text-[9px] text-secondary font-bold uppercase tracking-widest mb-2">Efficiency Rating</p>
+<div class="flex items-end gap-1">
+<span class="text-2xl font-bold text-on-surface">94.2%</span>
+<span class="material-symbols-outlined text-primary text-[16px] mb-1" data-icon="trending_up">trending_up</span>
+</div>
+</div>
+<div class="p-4 bg-surface-dim rounded-sm border border-outline-variant/50">
+<p class="text-[9px] text-secondary font-bold uppercase tracking-widest mb-2">Maintenance Risk</p>
+<div class="flex items-end gap-1">
+<span class="text-2xl font-bold text-on-surface">LOW</span>
+</div>
+</div>
+</div>
+<!-- Properties Table -->
+<section>
+<h3 class="text-[10px] font-bold text-on-surface uppercase tracking-widest mb-5 pb-2 border-b border-outline-variant">Metadata</h3>
+<div class="space-y-4">
+<div class="flex justify-between text-[13px]">
+<span class="text-secondary">Identifier</span>
+<span class="font-mono text-on-surface">TRB-88293-AX</span>
+</div>
+<div class="flex justify-between text-[13px]">
+<span class="text-secondary">Manufacturer</span>
+<span class="font-medium text-on-surface">Apex Aero Systems</span>
+</div>
+<div class="flex justify-between text-[13px]">
+<span class="text-secondary">Last Inspection</span>
+<span class="font-medium text-on-surface">24 Oct 2023</span>
+</div>
+<div class="flex justify-between text-[13px]">
+<span class="text-secondary">Service Interval</span>
+<span class="font-medium text-primary">Normal</span>
+</div>
+</div>
+</section>
+<!-- Linked Resources -->
+<section>
+<h3 class="text-[10px] font-bold text-on-surface uppercase tracking-widest mb-5 pb-2 border-b border-outline-variant">Documentation</h3>
+<div class="space-y-3">
+<div class="group p-4 bg-white border border-outline-variant hover:border-primary transition-all cursor-pointer flex items-center gap-4">
+<div class="p-2 bg-surface-dim text-secondary group-hover:bg-primary group-hover:text-white transition-colors">
+<span class="material-symbols-outlined" data-icon="description">description</span>
+</div>
+<div class="flex-1 min-w-0">
+<p class="text-[13px] font-bold text-on-surface truncate">Engineering_Specs_v4.2</p>
+<p class="text-[11px] text-secondary font-medium">PDF • 4.8 MB</p>
+</div>
+</div>
+<div class="group p-4 bg-white border border-outline-variant hover:border-primary transition-all cursor-pointer flex items-center gap-4">
+<div class="p-2 bg-surface-dim text-secondary group-hover:bg-primary group-hover:text-white transition-colors">
+<span class="material-symbols-outlined" data-icon="analytics">analytics</span>
+</div>
+<div class="flex-1 min-w-0">
+<p class="text-[13px] font-bold text-on-surface truncate">Operational_History_Log</p>
+<p class="text-[11px] text-secondary font-medium">XLSX • 1.2 MB</p>
+</div>
+</div>
+</div>
+</section>
+<!-- Panel Actions -->
+<div class="pt-6 flex gap-3">
+<button class="flex-1 flex items-center justify-center gap-2 bg-on-surface text-white py-3.5 rounded-sm font-label-md hover:bg-black transition-colors uppercase tracking-widest text-[11px]">
+<span class="material-symbols-outlined text-[18px]" data-icon="smart_toy">smart_toy</span>
+                    Copilot Analysis
+                </button>
+<button class="px-4 border border-outline-variant text-secondary hover:bg-surface-dim transition-colors rounded-sm">
+<span class="material-symbols-outlined" data-icon="share">share</span>
+</button>
+</div>
+</div>
+</aside>
+</main>
+<script>
+    function selectNode(nodeId) {
+        const panel = document.getElementById('detail-panel');
+        const title = document.getElementById('detail-title');
+        title.innerText = nodeId;
+        panel.classList.remove('translate-x-full');
+    }
+
+    function closePanel() {
+        const panel = document.getElementById('detail-panel');
+        panel.classList.add('translate-x-full');
+    }
+
+    // Basic canvas manipulation simulation
+    let isDragging = false;
+    let startX, startY, translateX = 0, translateY = 0;
+    const canvas = document.getElementById('graph-canvas');
+    const svg = canvas.querySelector('svg');
+
+    canvas.addEventListener('mousedown', (e) => {
+        if (e.target.closest('g')) return;
+        isDragging = true;
+        startX = e.clientX - translateX;
+        startY = e.clientY - translateY;
+        canvas.style.cursor = 'grabbing';
+    });
+
+    window.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+        translateX = e.clientX - startX;
+        translateY = e.clientY - startY;
+        svg.style.transform = `translate(${translateX}px, ${translateY}px)`;
+    });
+
+    window.addEventListener('mouseup', () => {
+        isDragging = false;
+        canvas.style.cursor = 'grab';
+    });
+</script>
+</body></html>

@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Expert Knowledge Copilot</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f9f9ff;
+            background-image: radial-gradient(#dce2f7 1px, transparent 1px);
+            background-size: 16px 16px;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #c3c6d7;
+            border-radius: 10px;
+        }
+        .message-appear {
+            animation: slideUp 0.3s ease-out forwards;
+        }
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-dim": "#d3daef",
+                        "on-error-container": "#93000a",
+                        "on-primary-fixed-variant": "#003ea8",
+                        "error": "#ba1a1a",
+                        "on-primary-fixed": "#00174b",
+                        "surface": "#f9f9ff",
+                        "error-container": "#ffdad6",
+                        "primary": "#004ac6",
+                        "surface-tint": "#0053db",
+                        "on-tertiary-container": "#e0fb9d",
+                        "on-error": "#ffffff",
+                        "on-background": "#141b2b",
+                        "surface-container-highest": "#dce2f7",
+                        "on-primary-container": "#eeefff",
+                        "primary-container": "#2563eb",
+                        "on-tertiary-fixed": "#151f00",
+                        "background": "#f9f9ff",
+                        "secondary": "#775a00",
+                        "on-tertiary": "#ffffff",
+                        "surface-container": "#e9edff",
+                        "secondary-fixed-dim": "#f6be0a",
+                        "tertiary-container": "#5f7527",
+                        "inverse-on-surface": "#edf0ff",
+                        "primary-fixed-dim": "#b4c5ff",
+                        "primary-fixed": "#dbe1ff",
+                        "tertiary-fixed": "#d2ed90",
+                        "inverse-surface": "#293040",
+                        "on-secondary-fixed-variant": "#5a4300",
+                        "secondary-container": "#fdc416",
+                        "on-primary": "#ffffff",
+                        "surface-container-high": "#e1e8fd",
+                        "on-secondary-container": "#6d5200",
+                        "outline": "#737686",
+                        "surface-container-lowest": "#ffffff",
+                        "surface-container-low": "#f1f3ff",
+                        "on-surface": "#141b2b",
+                        "secondary-fixed": "#ffdf98",
+                        "outline-variant": "#c3c6d7",
+                        "on-secondary": "#ffffff",
+                        "on-surface-variant": "#434655",
+                        "tertiary": "#475c0f",
+                        "tertiary-fixed-dim": "#b6d177",
+                        "on-tertiary-fixed-variant": "#394d00",
+                        "surface-bright": "#f9f9ff",
+                        "inverse-primary": "#b4c5ff",
+                        "on-secondary-fixed": "#251a00",
+                        "surface-variant": "#dce2f7"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "fontFamily": {
+                        "label-sm": ["Inter"],
+                        "label-md": ["Inter"],
+                        "headline-lg": ["Inter"],
+                        "headline-xl": ["Inter"],
+                        "body-md": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "headline-md": ["Inter"]
+                    },
+                    "fontSize": {
+                        "label-sm": ["11px", {"lineHeight": "14px", "fontWeight": "500"}],
+                        "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                        "headline-lg": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                        "headline-xl": ["36px", {"lineHeight": "44px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                        "headline-md": ["18px", {"lineHeight": "28px", "fontWeight": "600"}]
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-background text-on-surface overflow-hidden h-screen flex">
+<!-- Sidebar: Managed via SideNavBar Predicted Component -->
+<aside class="fixed left-0 top-0 h-full flex flex-col z-40 bg-surface-container-low border-r border-outline-variant w-[240px]">
+<div class="p-6 flex flex-col gap-1">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-2xl">precision_manufacturing</span>
+<span class="font-headline-md text-headline-md font-bold text-primary">Industrial Hub</span>
+</div>
+<span class="font-label-md text-label-md text-on-surface-variant">Precision Engineering</span>
+</div>
+<nav class="flex-1 px-2 py-4 space-y-1">
+<a class="flex items-center gap-3 px-4 py-3 rounded-sm transition-all duration-200 text-on-surface-variant hover:bg-surface-container-high" href="#">
+<span class="material-symbols-outlined" data-icon="upload_file">upload_file</span>
+<span class="font-label-md text-label-md">Document Ingestion</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-sm transition-all duration-200 bg-secondary-container text-on-secondary-container font-bold border-l-2 border-primary" href="#">
+<span class="material-symbols-outlined" data-icon="smart_toy">smart_toy</span>
+<span class="font-label-md text-label-md">Expert Copilot</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-sm transition-all duration-200 text-on-surface-variant hover:bg-surface-container-high" href="#">
+<span class="material-symbols-outlined" data-icon="account_tree">account_tree</span>
+<span class="font-label-md text-label-md">Knowledge Graph</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-sm transition-all duration-200 text-on-surface-variant hover:bg-surface-container-high" href="#">
+<span class="material-symbols-outlined" data-icon="description">description</span>
+<span class="font-label-md text-label-md">Document Library</span>
+</a>
+</nav>
+<div class="px-4 py-4">
+<button class="w-full bg-primary text-on-primary py-2 rounded-sm font-label-md text-label-md flex items-center justify-center gap-2 shadow-sm active:scale-95 transition-all">
+<span class="material-symbols-outlined text-sm">add</span>
+                New Analysis
+            </button>
+</div>
+<div class="p-4 mt-auto border-t border-outline-variant">
+<a class="flex items-center gap-3 px-4 py-2 text-on-surface-variant hover:bg-surface-container-high transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="analytics">analytics</span>
+<span class="font-label-md text-label-md">System Health</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-2 text-on-surface-variant hover:bg-surface-container-high transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="help">help</span>
+<span class="font-label-md text-label-md">Support</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-2 text-red-600 hover:bg-red-50 transition-colors mt-2" href="#"><span class="material-symbols-outlined" data-icon="logout">logout</span><span class="font-label-md text-label-md">Logout</span></a></div>
+</aside>
+<!-- Main Content Area -->
+<main class="flex-1 ml-[240px] flex flex-col h-full">
+<!-- TopNavBar Predicted Component -->
+<header class="flex justify-between items-center w-full h-16 px-margin z-50 bg-surface border-b border-outline-variant">
+<div class="flex items-center gap-4">
+<div class="relative">
+<span class="absolute inset-y-0 left-0 pl-3 flex items-center text-outline">
+<span class="material-symbols-outlined text-sm">search</span>
+</span>
+<input class="bg-surface-container-low border-none rounded-sm pl-10 pr-4 py-1.5 text-body-md w-64 focus:ring-1 focus:ring-primary" placeholder="Global search..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:text-primary transition-colors" data-icon="monitor_heart">monitor_heart</span>
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:text-primary transition-colors" data-icon="notifications">notifications</span>
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:text-primary transition-colors" data-icon="settings">settings</span>
+</div>
+<div class="h-8 w-8 rounded-full overflow-hidden border border-outline-variant">
+<img class="w-full h-full object-cover" data-alt="A professional headshot of a senior industrial engineer wearing a subtle headset, captured in a clean office with soft natural lighting. The style is professional and minimalist, with a cool color palette reflecting the corporate modernism of the platform." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAwKv73DVOth76tZT4dO-OCZGLv3SuFyYvy4pluUWeWXs65z3-S55Ty8C69e6y1PMTR8aGfX7CzXUOZ-JHR0eZK4bbNI1n9yclwJavVGRevsAv3lHoKT6j-MCwUheiJ0M9pAHoioadL45ObvabqXUdHph29jlALYHIwtggOY4F5SWgbqSBY_I4IxFAA-IeOAj27Ji9e8KQvOOsG5BSUtDffIJBuy9v83Jg2umFAExbeaOW9RZfuRUXkpQ"/>
+</div>
+</div>
+</header>
+<!-- Chat Workspace -->
+<div class="flex flex-1 overflow-hidden">
+<!-- Centered Chat Container -->
+<div class="flex-1 flex flex-col relative">
+<!-- Message Thread -->
+<div class="flex-1 overflow-y-auto p-margin space-y-8 custom-scrollbar" id="chat-thread">
+<!-- User Message -->
+<div class="flex flex-col items-end message-appear">
+<div class="max-w-2xl bg-surface-container-low border border-outline-variant text-on-surface px-4 py-3 rounded-xl rounded-tr-none shadow-sm">
+<p class="font-body-md text-body-md">What are the specific torque requirements and seal replacement intervals for the <span class="font-bold">CX-900 High-Pressure Turbine</span> assembly?</p>
+</div>
+<span class="mt-2 text-label-sm font-label-sm text-outline-variant">14:02 PM</span>
+</div>
+<!-- AI Message -->
+<div class="flex flex-col items-start message-appear">
+<div class="max-w-3xl bg-white border border-outline-variant p-6 rounded-xl rounded-tl-none shadow-sm relative">
+<!-- Metadata Block -->
+<div class="flex items-center justify-between mb-4 pb-3 border-b border-slate-50">
+<div class="flex items-center gap-3">
+<span class="px-2 py-0.5 bg-surface-container-low text-on-surface-variant text-[11px] font-label-sm rounded-full border border-outline-variant">Confidence: High</span>
+<span class="text-label-sm font-label-sm text-outline flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">link</span>
+                                        Citations: [1], [2]
+                                    </span>
+</div>
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">smart_toy</span>
+</div>
+<!-- Markdown Content -->
+<div class="space-y-4">
+<p class="font-body-md text-body-md text-on-surface">
+                                    Based on the technical manual for the <span class="font-bold text-primary">CX-900 High-Pressure Turbine</span>, the following specifications are mandatory for safe operation:
+                                </p>
+<div class="space-y-2">
+<h4 class="font-label-md text-label-md uppercase text-outline">Torque Requirements</h4>
+<ul class="list-disc pl-5 space-y-1 font-body-md text-body-md text-on-surface">
+<li>Main Flange Bolts: <span class="font-bold">1,250 Nm ± 5%</span> (Grade 12.9 hardware only)</li>
+<li>Access Port Covers: <span class="font-bold">450 Nm</span> cross-pattern sequence</li>
+<li>Bleed Valve Interface: <span class="font-bold">85 Nm</span> with anti-seize compound [1]</li>
+</ul>
+</div>
+<div class="space-y-2">
+<h4 class="font-label-md text-label-md uppercase text-outline">Seal Replacement Intervals</h4>
+<p class="font-body-md text-body-md text-on-surface">
+                                        Standard replacement is required every <span class="font-bold">12,000 operational hours</span>. However, the <span class="font-bold">PTFE Primary Seal (Part #99-XJ)</span> must be inspected during every minor maintenance cycle (4,000 hours) [2].
+                                    </p>
+</div>
+</div>
+<div class="mt-6 flex gap-2">
+<button class="px-3 py-1 text-label-sm font-label-sm border border-slate-200 hover:bg-slate-50 transition-colors flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">thumb_up</span> Helpful
+                                </button>
+<button class="px-3 py-1 text-label-sm font-label-sm border border-slate-200 hover:bg-slate-50 transition-colors flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">content_copy</span> Copy
+                                </button>
+<button class="px-3 py-1 text-label-sm font-label-sm border border-slate-200 hover:bg-slate-50 transition-colors flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">share</span> Share
+                                </button>
+</div>
+</div>
+<span class="mt-2 text-label-sm font-label-sm text-outline-variant">14:02 PM • Industrial Hub Copilot v4.2</span>
+</div>
+</div>
+<!-- Input Bar Container -->
+<div class="p-margin bg-white border-t border-outline-variant">
+<div class="max-w-4xl mx-auto relative group">
+<textarea class="w-full pl-12 pr-16 py-4 bg-surface border border-outline-variant rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all resize-none font-body-md custom-scrollbar" id="chat-input" placeholder="Ask a technical question..." rows="1"></textarea>
+<div class="absolute left-4 top-4 text-outline group-focus-within:text-primary transition-colors">
+<span class="material-symbols-outlined">psychology</span>
+</div>
+<div class="absolute right-4 top-3 flex items-center gap-2">
+<button class="p-2 text-outline hover:text-primary transition-colors">
+<span class="material-symbols-outlined">attach_file</span>
+</button>
+<button class="p-2 bg-primary-container text-on-primary rounded-lg shadow-md hover:opacity-90 transition-all active:scale-90">
+<span class="material-symbols-outlined">send</span>
+</button>
+</div>
+<div class="mt-2 flex items-center gap-3">
+<span class="text-label-sm font-label-sm text-outline">Suggested:</span>
+<button class="text-label-sm font-label-sm px-3 py-1 border border-outline-variant rounded-full hover:bg-surface-container-low transition-colors text-on-surface-variant">Safety Protocols</button>
+<button class="text-label-sm font-label-sm px-3 py-1 border border-outline-variant rounded-full hover:bg-surface-container-low transition-colors text-on-surface-variant">Fault Code Lookup</button>
+<button class="text-label-sm font-label-sm px-3 py-1 border border-outline-variant rounded-full hover:bg-surface-container-low transition-colors text-on-surface-variant">Vendor Contacts</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Sidebar: Source History / Current Citations -->
+<aside class="w-[320px] bg-white border-l border-outline-variant flex flex-col h-full z-10">
+<div class="p-4 border-b border-slate-100 flex items-center justify-between">
+<h3 class="font-headline-md text-headline-md text-on-surface">Citations</h3>
+<span class="px-2 py-0.5 bg-surface-container text-primary font-label-md text-label-md rounded-sm">2 Sources</span>
+</div>
+<div class="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
+<!-- Citation Card 1 -->
+<div class="group border border-slate-100 p-3 rounded-lg hover:border-primary transition-all cursor-pointer bg-slate-50/50">
+<div class="flex items-start gap-3 mb-3">
+<div class="bg-red-50 text-red-600 p-2 rounded">
+<span class="material-symbols-outlined">picture_as_pdf</span>
+</div>
+<div class="flex-1 overflow-hidden">
+<p class="font-label-md text-label-md text-on-surface truncate">WO-489_Seal_Replacement.pdf</p>
+<p class="font-label-sm text-label-sm text-outline">Page 24 • Section 4.2</p>
+</div>
+</div>
+<div class="bg-white p-2 rounded border border-slate-100 text-[11px] leading-relaxed text-on-surface-variant italic mb-3">
+                            "...torque values for bleed valve interface must not exceed 85 Nm to prevent thread fatigue..."
+                        </div>
+<div class="flex items-center justify-between">
+<span class="text-label-sm font-label-sm text-primary group-hover:underline">View Source</span>
+<span class="material-symbols-outlined text-outline text-sm">open_in_new</span>
+</div>
+</div>
+<!-- Citation Card 2 -->
+<div class="group border border-slate-100 p-3 rounded-lg hover:border-primary transition-all cursor-pointer">
+<div class="flex items-start gap-3 mb-3">
+<div class="bg-blue-50 text-blue-600 p-2 rounded">
+<span class="material-symbols-outlined">settings_applications</span>
+</div>
+<div class="flex-1 overflow-hidden">
+<p class="font-label-md text-label-md text-on-surface truncate">CX-900_Main_Maintenance_Log.xlsx</p>
+<p class="font-label-sm text-label-sm text-outline">Row 1422 • Sheet: CycleHistory</p>
+</div>
+</div>
+<div class="flex items-center justify-between">
+<span class="text-label-sm font-label-sm text-primary group-hover:underline">Open Dataset</span>
+<span class="material-symbols-outlined text-outline text-sm">database</span>
+</div>
+</div>
+<!-- Knowledge Context Section -->
+<div class="pt-6 border-t border-slate-100">
+<h4 class="font-label-md text-label-md uppercase text-outline mb-3 px-1">Semantic Context</h4>
+<div class="flex flex-wrap gap-2">
+<span class="px-2 py-1 bg-surface-container-high text-on-surface-variant text-[11px] rounded-sm">Turbine Dynamics</span>
+<span class="px-2 py-1 bg-surface-container-high text-on-surface-variant text-[11px] rounded-sm">Maintenance Protocols</span>
+<span class="px-2 py-1 bg-surface-container-high text-on-surface-variant text-[11px] rounded-sm">Safety Specs</span>
+<span class="px-2 py-1 bg-surface-container-high text-on-surface-variant text-[11px] rounded-sm">CX-Series</span>
+</div>
+</div>
+</div>
+<!-- Source History Footer -->
+<div class="p-4 bg-slate-50 border-t border-outline-variant">
+<button class="w-full text-left flex items-center justify-between group">
+<span class="font-label-md text-label-md text-on-surface-variant group-hover:text-primary">Full Source History</span>
+<span class="material-symbols-outlined text-outline group-hover:text-primary transition-colors">history</span>
+</button>
+</div>
+</aside>
+</div>
+</main>
+<script>
+        // Micro-interaction for input auto-resize
+        const input = document.getElementById('chat-input');
+        input.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = (this.scrollHeight) + 'px';
+            if (this.scrollHeight > 200) {
+                this.style.height = '200px';
+                this.style.overflowY = 'auto';
+            }
+        });
+
+        // Simple send animation simulation
+        const sendBtn = input.nextElementSibling.nextElementSibling.querySelector('button');
+        sendBtn.addEventListener('click', () => {
+            if(input.value.trim() !== "") {
+                const thread = document.getElementById('chat-thread');
+                const userMsg = `
+                    <div class="flex flex-col items-end message-appear">
+                        <div class="max-w-2xl bg-surface-container-high text-on-surface px-4 py-3 rounded-xl rounded-tr-none shadow-sm">
+                            <p class="font-body-md text-body-md">${input.value}</p>
+                        </div>
+                        <span class="mt-2 text-label-sm font-label-sm text-outline-variant">Just now</span>
+                    </div>
+                `;
+                thread.insertAdjacentHTML('beforeend', userMsg);
+                input.value = "";
+                input.style.height = 'auto';
+                thread.scrollTo({ top: thread.scrollHeight, behavior: 'smooth' });
+            }
+        });
+    </script>
+</body></html>

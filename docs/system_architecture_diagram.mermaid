@@ -1,0 +1,79 @@
+flowchart TB
+    subgraph CLIENT["Client Layer"]
+        WEB["Web App (Next.js + Tailwind)<br/>Desktop: Engineer / Compliance / Manager"]
+        MOBILE["Mobile-responsive View<br/>Field Technician"]
+    end
+
+    subgraph API["Backend Orchestration — FastAPI (async)"]
+        ROUTER["Query Router"]
+        COPILOT["Expert Copilot Agent<br/>(LangChain, GraphRAG-style)"]
+        RCA["Maintenance RCA Agent"]
+        COMPLIANCE["Compliance Gap Agent"]
+        LESSONS["Lessons Learned Agent"]
+    end
+
+    subgraph INGEST["Ingestion Pipeline (offline / batch)"]
+        UPLOAD["Doc Upload: PDF, Image, CSV/XLSX"]
+        PARSE["Parsing Layer<br/>PDF text: pdfplumber<br/>P&ID/scans: Gemini 2.5 Flash Vision"]
+        EXTRACT["Entity Extraction Agent<br/>(Gemini 2.5 Flash, structured output)"]
+        CHUNK["Chunking + Embedding<br/>(Voyage AI embeddings)"]
+    end
+
+    subgraph HITL["HITL Verification Dashboard — status: pending_review"]
+        REVIEW["Human Reviewer<br/>/admin/review/[id]"]
+        LOCK["Manual edit → is_locked = true"]
+        IMPROVE["Improve via AI<br/>(re-extract unlocked rows only)"]
+        APPROVE["Approve → status = approved"]
+    end
+
+    subgraph DATA["Data Layer — PostgreSQL (Supabase) + pgvector"]
+        VEC[("vector_chunks<br/>text + embedding + page_number")]
+        GRAPH[("entities + entity_relationships<br/>(relational graph model)<br/>+ source_page")]
+        META[("documents<br/>storage_path + storage_url")]
+    end
+
+    subgraph STORAGE["Supabase Storage — raw files"]
+        FILES[("Original PDFs / images / CSVs")]
+    end
+
+    WEB --> ROUTER
+    MOBILE --> ROUTER
+    ROUTER --> COPILOT
+    ROUTER --> RCA
+    ROUTER --> COMPLIANCE
+    ROUTER --> LESSONS
+
+    COPILOT --> VEC
+    COPILOT --> GRAPH
+    RCA --> VEC
+    RCA --> GRAPH
+    COMPLIANCE --> VEC
+    COMPLIANCE --> GRAPH
+    LESSONS --> VEC
+    LESSONS --> GRAPH
+
+    UPLOAD --> FILES
+    UPLOAD --> PARSE --> EXTRACT --> CHUNK
+    EXTRACT --> GRAPH
+    CHUNK --> VEC
+    UPLOAD --> META
+    META -. "storage_url" .-> FILES
+
+    CHUNK --> REVIEW
+    EXTRACT --> REVIEW
+    REVIEW --> LOCK
+    REVIEW --> IMPROVE
+    IMPROVE -. "skips is_locked=true rows" .-> GRAPH
+    IMPROVE -. "skips is_locked=true rows" .-> VEC
+    REVIEW --> APPROVE
+    APPROVE -. "status: approved" .-> META
+
+    COPILOT -. "queries WHERE status=approved only" .-> META
+    RCA -. "queries WHERE status=approved only" .-> META
+    COMPLIANCE -. "queries WHERE status=approved only" .-> META
+    LESSONS -. "queries WHERE status=approved only" .-> META
+
+    COPILOT -. "answer + citations{filename,page,url} + confidence" .-> WEB
+    COPILOT -. "answer + citations{filename,page,url} + confidence" .-> MOBILE
+    WEB -. "click citation → opens file at page" .-> FILES
+    MOBILE -. "click citation → opens file at page" .-> FILES

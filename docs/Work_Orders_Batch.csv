@@ -1,0 +1,13 @@
+work_order_id,equipment_id,work_type,date_completed,status,notes
+WO-401,Pump-101,Routine Inspection,2025-08-15,Closed,All parameters normal.
+WO-412,Pump-305,Lubrication,2025-09-10,Closed,Added standard bearing grease.
+WO-423,Pump-410,Bearing Check,2025-10-22,Closed,Vibration within spec.
+WO-435,Pump-204,Minor Calibration,2025-11-05,Closed,Recalibrated flow sensor.
+WO-448,Pump-515,Filter Replacement,2025-12-18,Closed,Replaced inlet suction filter.
+WO-459,Pump-620,Routine Inspection,2026-01-12,Closed,No issues found.
+WO-471,Pump-101,Lubrication,2026-02-28,Closed,Routine oil change.
+WO-482,Pump-305,Filter Replacement,2026-03-15,Closed,Filter mesh cleaned.
+WO-495,Pump-410,Routine Inspection,2026-04-10,Closed,"Checked alignment, okay."
+WO-510,Pump-515,Bearing Check,2026-05-22,Closed,Bearing temps normal.
+WO-521,Pump-620,Minor Calibration,2026-06-14,Closed,Adjusted setpoints.
+WO-533,Pump-204,Routine Inspection,2026-07-02,Closed,Visual check completed.

@@ -1,0 +1,285 @@
+{
+  "screenshot": {
+    "name": "projects/14492300428924120467/screens/664254ddfa784fed9608e05b82f72dbc/fileEntries/screenshot",
+    "downloadUrl": "https://lh3.googleusercontent.com/aida/AP1WRLvKRNU4wUkHRr2jFmz6BKCLLO1VkxI88l2tz87swI3rPDfZombMAaD2HO1F5QQMoksk_Hvi_xHLwqa1Evwm6qNr16sB9phXEVA5F7yYwzPEg-QRSKuvfqorxUQXCqIHIV75KuRku6dxqP_nRs-p0MJOq4sZigqpU6zOHXyYv1Ni9dGZlfKFO5Bl4yvCodqg-6qR7t3Ao_iTekcg7Fw65gletJrdMcKuIhUiHqmfhkF1KTFxMPNTcDnSWNWi"
+  },
+  "htmlCode": {
+    "name": "projects/14492300428924120467/screens/664254ddfa784fed9608e05b82f72dbc/fileEntries/html",
+    "downloadUrl": "https://contribution.usercontent.google.com/download?c=CgthaWRhX2NvZGVmeBJ8Eh1hcHBfY29tcGFuaW9uX2dlbmVyYXRlZF9maWxlcxpbCiVodG1sXzAwMDY1NmQ3ZWYxZDc1YTgwMmE5YTdkNjQwMWZjYzAyEgsSBxDV3OCsxQ0YAZIBJAoKcHJvamVjdF9pZBIWQhQxNDQ5MjMwMDQyODkyNDEyMDQ2Nw&filename=&opi=89354086",
+    "mimeType": "text/html"
+  },
+  "id": "664254ddfa784fed9608e05b82f72dbc",
+  "generatedBy": "figaro_agent",
+  "width": "2560",
+  "height": "2048",
+  "title": "Expert Knowledge Copilot",
+  "prompt": "Expert Knowledge Copilot Interface.\nLayout: Centered chat interface with a sidebar for 'Source History' or 'Current Citations'.\nFeatures:\n- Chat input bar with 'Ask a technical question...' placeholder.\n- Message bubbles for user and AI.\n- AI responses should use Markdown: bold equipment tags, bulleted lists.\n- AI messages MUST include a 'Metadata' block at the top: Confidence (High/Medium/Low) and Citation links (e.g., [1] WO-489_Seal_Replacement.pdf).\n- Citation cards: Detailed previews of sources used in the answer, showing file name, page number, and a link to view the PDF.\n- Design: Clean, professional, using the Action Blue for primary interactions. Use the dot-grid canvas background.",
+  "name": "projects/14492300428924120467/screens/664254ddfa784fed9608e05b82f72dbc",
+  "theme": {
+    "colorMode": "LIGHT",
+    "font": "INTER",
+    "roundness": "ROUND_FOUR",
+    "customColor": "#2563eb",
+    "headlineFont": "INTER",
+    "bodyFont": "INTER",
+    "labelFont": "INTER",
+    "namedColors": {
+      "on_tertiary_fixed_variant": "#394d00",
+      "on_surface_variant": "#434655",
+      "tertiary_container": "#5f7527",
+      "on_primary_fixed": "#00174b",
+      "surface_container_high": "#e1e8fd",
+      "primary_container": "#2563eb",
+      "tertiary": "#475c0f",
+      "tertiary_fixed_dim": "#b6d177",
+      "on_tertiary_fixed": "#151f00",
+      "on_secondary_fixed": "#251a00",
+      "primary_fixed_dim": "#b4c5ff",
+      "surface_tint": "#0053db",
+      "primary": "#004ac6",
+      "on_secondary_container": "#6d5200",
+      "background": "#f9f9ff",
+      "surface": "#f9f9ff",
+      "on_primary_fixed_variant": "#003ea8",
+      "surface_dim": "#d3daef",
+      "primary_fixed": "#dbe1ff",
+      "inverse_surface": "#293040",
+      "surface_container": "#e9edff",
+      "surface_container_low": "#f1f3ff",
+      "on_tertiary": "#ffffff",
+      "error": "#ba1a1a",
+      "on_tertiary_container": "#e0fb9d",
+      "surface_container_highest": "#dce2f7",
+      "secondary": "#775a00",
+      "outline_variant": "#c3c6d7",
+      "on_error": "#ffffff",
+      "on_primary": "#ffffff",
+      "surface_container_lowest": "#ffffff",
+      "error_container": "#ffdad6",
+      "surface_variant": "#dce2f7",
+      "inverse_on_surface": "#edf0ff",
+      "on_error_container": "#93000a",
+      "on_surface": "#141b2b",
+      "secondary_fixed_dim": "#f6be0a",
+      "on_primary_container": "#eeefff",
+      "outline": "#737686",
+      "on_secondary_fixed_variant": "#5a4300",
+      "secondary_container": "#fdc416",
+      "surface_bright": "#f9f9ff",
+      "secondary_fixed": "#ffdf98",
+      "inverse_primary": "#b4c5ff",
+      "on_secondary": "#ffffff",
+      "tertiary_fixed": "#d2ed90",
+      "on_background": "#141b2b"
+    },
+    "colorVariant": "FIDELITY",
+    "overridePrimaryColor": "#2563eb",
+    "overrideSecondaryColor": "#ffc61a",
+    "overrideTertiaryColor": "#adc76f",
+    "overrideNeutralColor": "#111827",
+    "spacingScale": 2,
+    "typography": {
+      "label-sm": {
+        "fontFamily": "Inter",
+        "fontSize": "11px",
+        "fontWeight": "500",
+        "lineHeight": "14px"
+      },
+      "body-md": {
+        "fontFamily": "Inter",
+        "fontSize": "14px",
+        "fontWeight": "400",
+        "lineHeight": "20px"
+      },
+      "body-lg": {
+        "fontFamily": "Inter",
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "lineHeight": "24px"
+      },
+      "headline-xl-mobile": {
+        "fontFamily": "Inter",
+        "fontSize": "28px",
+        "fontWeight": "700",
+        "lineHeight": "34px"
+      },
+      "headline-md": {
+        "fontFamily": "Inter",
+        "fontSize": "18px",
+        "fontWeight": "600",
+        "lineHeight": "28px"
+      },
+      "headline-lg": {
+        "fontFamily": "Inter",
+        "fontSize": "24px",
+        "fontWeight": "600",
+        "lineHeight": "32px",
+        "letterSpacing": "-0.01em"
+      },
+      "headline-xl": {
+        "fontFamily": "Inter",
+        "fontSize": "36px",
+        "fontWeight": "700",
+        "lineHeight": "44px",
+        "letterSpacing": "-0.02em"
+      },
+      "label-md": {
+        "fontFamily": "Inter",
+        "fontSize": "12px",
+        "fontWeight": "600",
+        "lineHeight": "16px",
+        "letterSpacing": "0.05em"
+      }
+    },
+    "spacing": {
+      "container-max": "1440px",
+      "gutter": "16px",
+      "base": "4px",
+      "margin": "24px"
+    },
+    "headlineFontFamily": "Inter",
+    "bodyFontFamily": "Inter",
+    "labelFontFamily": "Inter"
+  },
+  "deviceType": "DESKTOP",
+  "screenType": "DESIGN",
+  "screenMetadata": {
+    "agentType": "PRO_AGENT",
+    "status": "COMPLETE"
+  },
+  "designSystem": {
+    "name": "assets/f05f2e41f6c44d3991e82a70b3fdfb6e",
+    "designSystem": {
+      "displayName": "Industrial Knowledge System",
+      "styleGuidelines": "## Brand & Style\nThe design system is engineered for industrial-grade knowledge management, emphasizing precision, reliability, and data density. The aesthetic is rooted in **Corporate Modernism** with a focus on functional utility. It avoids unnecessary decoration, instead using structural alignment and subtle depth to organize complex information. \n\nThe target audience consists of researchers, analysts, and enterprise users who require a high signal-to-noise ratio. The emotional response should be one of \"controlled efficiency\"\u2014the UI acts as a transparent, high-performance tool that empowers deep work rather than distracting from it.\n\n## Layout & Spacing\nThe layout follows a **Fluid Grid** model based on an 8px square system, with 4px increments for micro-adjustments.\n\n- **Desktop:** 12-column grid with 16px gutters and 24px outer margins.\n- **Tablet:** 8-column grid with 16px gutters and 16px margins.\n- **Mobile:** 4-column grid with 12px gutters and 16px margins.\n\nThe layout philosophy prioritizes \"Information Zoning.\" The workspace is divided into a fixed-width left navigation (240px), a flexible main workspace, and an optional right-hand \"Inspector\" panel (320px) for metadata. This ensures that the central workspace remains focused while tools are always accessible.\n\n## Elevation & Depth\nDepth in this design system is communicated through **Tonal Layers** and **Low-Contrast Outlines** rather than aggressive shadows.\n\n- **Level 0 (Canvas):** `#fcfcfd` with dot grid.\n- **Level 1 (Cards/Sections):** `#ffffff` with a 1px border of `Slate-100` (#e2e8f0).\n- **Level 2 (Dropdowns/Modals):** `#ffffff` with a subtle 1px border and a soft, neutral ambient shadow (Y: 4px, Blur: 12px, Opacity: 0.05).\n\nBorders are the primary tool for separation. Use `Slate-50` for internal dividers within a card and `Slate-100` for the outer boundaries of structural components.\n\n## Components\n\n- **Buttons:** Primary buttons use `Action Blue` with white text. Ghost buttons use `Slate-600` text with no background until hover. All buttons feature a 1px inset border for a \"pressed\" tactile feel in active states.\n- **Chips & Badges:** Skill chips use the `Lime` scale with dark-green text. They are rectangular with a small 2px radius. Metric badges (scores) use the `Gold` scale with a semi-bold weight.\n- **Input Fields:** Use a 1px `Slate-200` border that transitions to `Action Blue` on focus. Backgrounds remain pure white to stand out against the canvas.\n- **Lists:** Data tables and lists use \"Zebra\" striping with `Slate-50` for even rows. Hover states on list items use a 2px `Action Blue` left-border accent.\n- **Cards:** Cards should have a consistent header area with a `Slate-50` bottom border. Titles within cards use `Headline-md`.\n- **Workspace Canvas:** The dot-grid pattern is implemented as a CSS background-image using a 1px dot every 16px.",
+      "theme": {
+        "colorMode": "LIGHT",
+        "font": "INTER",
+        "roundness": "ROUND_FOUR",
+        "customColor": "#2563eb",
+        "headlineFont": "INTER",
+        "bodyFont": "INTER",
+        "labelFont": "INTER",
+        "namedColors": {
+          "on_surface_variant": "#434655",
+          "on_tertiary_fixed_variant": "#394d00",
+          "tertiary_container": "#5f7527",
+          "surface_container_high": "#e1e8fd",
+          "on_primary_fixed": "#00174b",
+          "primary_container": "#2563eb",
+          "tertiary_fixed_dim": "#b6d177",
+          "tertiary": "#475c0f",
+          "on_tertiary_fixed": "#151f00",
+          "on_secondary_fixed": "#251a00",
+          "primary_fixed_dim": "#b4c5ff",
+          "on_secondary_container": "#6d5200",
+          "primary": "#004ac6",
+          "surface_tint": "#0053db",
+          "on_primary_fixed_variant": "#003ea8",
+          "surface": "#f9f9ff",
+          "background": "#f9f9ff",
+          "surface_container": "#e9edff",
+          "inverse_surface": "#293040",
+          "primary_fixed": "#dbe1ff",
+          "surface_dim": "#d3daef",
+          "error": "#ba1a1a",
+          "on_tertiary": "#ffffff",
+          "surface_container_low": "#f1f3ff",
+          "secondary": "#775a00",
+          "surface_container_highest": "#dce2f7",
+          "on_tertiary_container": "#e0fb9d",
+          "outline_variant": "#c3c6d7",
+          "surface_variant": "#dce2f7",
+          "error_container": "#ffdad6",
+          "surface_container_lowest": "#ffffff",
+          "on_primary": "#ffffff",
+          "on_error": "#ffffff",
+          "inverse_on_surface": "#edf0ff",
+          "on_error_container": "#93000a",
+          "secondary_fixed_dim": "#f6be0a",
+          "on_surface": "#141b2b",
+          "secondary_container": "#fdc416",
+          "surface_bright": "#f9f9ff",
+          "on_secondary_fixed_variant": "#5a4300",
+          "outline": "#737686",
+          "on_primary_container": "#eeefff",
+          "secondary_fixed": "#ffdf98",
+          "inverse_primary": "#b4c5ff",
+          "on_secondary": "#ffffff",
+          "tertiary_fixed": "#d2ed90",
+          "on_background": "#141b2b"
+        },
+        "designMd": "---\nname: Industrial Knowledge System\ncolors:\n  surface: '#f9f9ff'\n  surface-dim: '#d3daef'\n  surface-bright: '#f9f9ff'\n  surface-container-lowest: '#ffffff'\n  surface-container-low: '#f1f3ff'\n  surface-container: '#e9edff'\n  surface-container-high: '#e1e8fd'\n  surface-container-highest: '#dce2f7'\n  on-surface: '#141b2b'\n  on-surface-variant: '#434655'\n  inverse-surface: '#293040'\n  inverse-on-surface: '#edf0ff'\n  outline: '#737686'\n  outline-variant: '#c3c6d7'\n  surface-tint: '#0053db'\n  primary: '#004ac6'\n  on-primary: '#ffffff'\n  primary-container: '#2563eb'\n  on-primary-container: '#eeefff'\n  inverse-primary: '#b4c5ff'\n  secondary: '#775a00'\n  on-secondary: '#ffffff'\n  secondary-container: '#fdc416'\n  on-secondary-container: '#6d5200'\n  tertiary: '#475c0f'\n  on-tertiary: '#ffffff'\n  tertiary-container: '#5f7527'\n  on-tertiary-container: '#e0fb9d'\n  error: '#ba1a1a'\n  on-error: '#ffffff'\n  error-container: '#ffdad6'\n  on-error-container: '#93000a'\n  primary-fixed: '#dbe1ff'\n  primary-fixed-dim: '#b4c5ff'\n  on-primary-fixed: '#00174b'\n  on-primary-fixed-variant: '#003ea8'\n  secondary-fixed: '#ffdf98'\n  secondary-fixed-dim: '#f6be0a'\n  on-secondary-fixed: '#251a00'\n  on-secondary-fixed-variant: '#5a4300'\n  tertiary-fixed: '#d2ed90'\n  tertiary-fixed-dim: '#b6d177'\n  on-tertiary-fixed: '#151f00'\n  on-tertiary-fixed-variant: '#394d00'\n  background: '#f9f9ff'\n  on-background: '#141b2b'\n  surface-variant: '#dce2f7'\ntypography:\n  headline-xl:\n    fontFamily: Inter\n    fontSize: 36px\n    fontWeight: '700'\n    lineHeight: 44px\n    letterSpacing: -0.02em\n  headline-lg:\n    fontFamily: Inter\n    fontSize: 24px\n    fontWeight: '600'\n    lineHeight: 32px\n    letterSpacing: -0.01em\n  headline-md:\n    fontFamily: Inter\n    fontSize: 18px\n    fontWeight: '600'\n    lineHeight: 28px\n  body-lg:\n    fontFamily: Inter\n    fontSize: 16px\n    fontWeight: '400'\n    lineHeight: 24px\n  body-md:\n    fontFamily: Inter\n    fontSize: 14px\n    fontWeight: '400'\n    lineHeight: 20px\n  label-md:\n    fontFamily: Inter\n    fontSize: 12px\n    fontWeight: '600'\n    lineHeight: 16px\n    letterSpacing: 0.05em\n  label-sm:\n    fontFamily: Inter\n    fontSize: 11px\n    fontWeight: '500'\n    lineHeight: 14px\n  headline-xl-mobile:\n    fontFamily: Inter\n    fontSize: 28px\n    fontWeight: '700'\n    lineHeight: 34px\nrounded:\n  sm: 0.125rem\n  DEFAULT: 0.25rem\n  md: 0.375rem\n  lg: 0.5rem\n  xl: 0.75rem\n  full: 9999px\nspacing:\n  base: 4px\n  gutter: 16px\n  margin: 24px\n  container-max: 1440px\n---\n\n## Brand & Style\nThe design system is engineered for industrial-grade knowledge management, emphasizing precision, reliability, and data density. The aesthetic is rooted in **Corporate Modernism** with a focus on functional utility. It avoids unnecessary decoration, instead using structural alignment and subtle depth to organize complex information. \n\nThe target audience consists of researchers, analysts, and enterprise users who require a high signal-to-noise ratio. The emotional response should be one of \"controlled efficiency\"\u2014the UI acts as a transparent, high-performance tool that empowers deep work rather than distracting from it.\n\n## Colors\nThe palette is dominated by \"Action Blue\" to signify interactive elements, supported by a rigorous grayscale for structure. \n\n- **Primary Scale:** Derived from #2563eb, ranging from a pale #eff6ff (hover states/highlights) to a deep #212121 for contrast.\n- **Surface Strategy:** The workspace uses a layered approach. The base canvas is `#fcfcfd`, overlaid with a subtle 16px dot-grid pattern in `Slate-50`. Primary content containers and cards use pure `#ffffff` to lift them from the background.\n- **Accents & Semantics:** \n    - **Gold:** Reserved exclusively for performance metrics and scores.\n    - **Lime:** Used for skill badges and technical proficiency indicators.\n    - **Orange:** Used for high-priority notifications that are not yet \"Danger\" level.\n- **Data Visualization:** Charts primarily utilize Lime-to-Blue gradients to maintain a professional, tech-forward appearance.\n\n## Typography\nThis design system utilizes **Inter** for all roles to ensure maximum legibility and a systematic, utilitarian feel. \n\nThe type hierarchy is strictly defined to handle high information density. `Body-md` is the workhorse for most interface text, while `Label-md` (uppercase) is used for section headers within sidebars and small metadata tags. Letter spacing is slightly tightened on large headlines for a more \"locked-in\" professional look and slightly loosened on small labels to maintain legibility.\n\n## Layout & Spacing\nThe layout follows a **Fluid Grid** model based on an 8px square system, with 4px increments for micro-adjustments.\n\n- **Desktop:** 12-column grid with 16px gutters and 24px outer margins.\n- **Tablet:** 8-column grid with 16px gutters and 16px margins.\n- **Mobile:** 4-column grid with 12px gutters and 16px margins.\n\nThe layout philosophy prioritizes \"Information Zoning.\" The workspace is divided into a fixed-width left navigation (240px), a flexible main workspace, and an optional right-hand \"Inspector\" panel (320px) for metadata. This ensures that the central workspace remains focused while tools are always accessible.\n\n## Elevation & Depth\nDepth in this design system is communicated through **Tonal Layers** and **Low-Contrast Outlines** rather than aggressive shadows.\n\n- **Level 0 (Canvas):** `#fcfcfd` with dot grid.\n- **Level 1 (Cards/Sections):** `#ffffff` with a 1px border of `Slate-100` (#e2e8f0).\n- **Level 2 (Dropdowns/Modals):** `#ffffff` with a subtle 1px border and a soft, neutral ambient shadow (Y: 4px, Blur: 12px, Opacity: 0.05).\n\nBorders are the primary tool for separation. Use `Slate-50` for internal dividers within a card and `Slate-100` for the outer boundaries of structural components.\n\n## Shapes\nThe shape language is **Soft** but disciplined. A 4px standard radius (`0.25rem`) is applied to buttons, inputs, and small widgets to provide a modern feel without sacrificing the \"industrial\" precision of the layout. Larger containers like cards use an 8px radius (`0.5rem`) to clearly define the content area against the workspace canvas.\n\n## Components\n\n- **Buttons:** Primary buttons use `Action Blue` with white text. Ghost buttons use `Slate-600` text with no background until hover. All buttons feature a 1px inset border for a \"pressed\" tactile feel in active states.\n- **Chips & Badges:** Skill chips use the `Lime` scale with dark-green text. They are rectangular with a small 2px radius. Metric badges (scores) use the `Gold` scale with a semi-bold weight.\n- **Input Fields:** Use a 1px `Slate-200` border that transitions to `Action Blue` on focus. Backgrounds remain pure white to stand out against the canvas.\n- **Lists:** Data tables and lists use \"Zebra\" striping with `Slate-50` for even rows. Hover states on list items use a 2px `Action Blue` left-border accent.\n- **Cards:** Cards should have a consistent header area with a `Slate-50` bottom border. Titles within cards use `Headline-md`.\n- **Workspace Canvas:** The dot-grid pattern is implemented as a CSS background-image using a 1px dot every 16px.",
+        "colorVariant": "FIDELITY",
+        "overridePrimaryColor": "#2563eb",
+        "overrideSecondaryColor": "#ffc61a",
+        "overrideTertiaryColor": "#adc76f",
+        "overrideNeutralColor": "#111827",
+        "spacingScale": 2,
+        "typography": {
+          "label-md": {
+            "fontFamily": "Inter",
+            "fontSize": "12px",
+            "fontWeight": "600",
+            "lineHeight": "16px",
+            "letterSpacing": "0.05em"
+          },
+          "headline-xl": {
+            "fontFamily": "Inter",
+            "fontSize": "36px",
+            "fontWeight": "700",
+            "lineHeight": "44px",
+            "letterSpacing": "-0.02em"
+          },
+          "headline-lg": {
+            "fontFamily": "Inter",
+            "fontSize": "24px",
+            "fontWeight": "600",
+            "lineHeight": "32px",
+            "letterSpacing": "-0.01em"
+          },
+          "body-lg": {
+            "fontFamily": "Inter",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "lineHeight": "24px"
+          },
+          "headline-md": {
+            "fontFamily": "Inter",
+            "fontSize": "18px",
+            "fontWeight": "600",
+            "lineHeight": "28px"
+          },
+          "headline-xl-mobile": {
+            "fontFamily": "Inter",
+            "fontSize": "28px",
+            "fontWeight": "700",
+            "lineHeight": "34px"
+          },
+          "body-md": {
+            "fontFamily": "Inter",
+            "fontSize": "14px",
+            "fontWeight": "400",
+            "lineHeight": "20px"
+          },
+          "label-sm": {
+            "fontFamily": "Inter",
+            "fontSize": "11px",
+            "fontWeight": "500",
+            "lineHeight": "14px"
+          }
+        },
+        "spacing": {
+          "container-max": "1440px",
+          "margin": "24px",
+          "gutter": "16px",
+          "base": "4px"
+        },
+        "headlineFontFamily": "Inter",
+        "bodyFontFamily": "Inter",
+        "labelFontFamily": "Inter"
+      }
+    },
+    "version": "1"
+  }
+}
