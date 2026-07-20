@@ -10,7 +10,7 @@ See `system_architecture_diagram.mermaid` for the visual diagram referenced thro
 Three layers, one database:
 
 1. **Client Layer** — React (Vite SPA) web app, mobile-responsive by default (no separate native app for the hackathon)
-2. **Backend Orchestration** — FastAPI async server hosting a query router and four specialized agents
+2. **Backend Orchestration** — FastAPI async server hosting a query router and four specialized agents. Secured via JWT Auth and Role-Based Access Control (Admin vs. Operator).
 3. **Data Layer** — a single PostgreSQL (Supabase) instance with the `pgvector` extension, holding vector embeddings, relational "graph" tables, and metadata
 
 **Why one database instead of Neo4j + Qdrant + Postgres:** at 40-50 users and ~30-40 seed documents, the dataset is small enough that a relational graph model (`entities` + `entity_relationships` tables, queried with recursive CTEs) delivers the same relationship-traversal capability the judges are scoring ("knowledge graph linkage completeness") without the operational cost of running, securing, and debugging three separate databases in a multi-day build window.
@@ -97,11 +97,11 @@ User question (web or mobile)
 
 | Table | Purpose | Key columns |
 |---|---|---|
-| `documents` | Source file metadata + retrievable location + review workflow state | id, filename, type, upload_date, **storage_path**, **storage_url**, **status** (`processing` \| `pending_review` \| `approved` \| `error`) |
+| `documents` | Source file metadata + retrievable location + review workflow state | id, filename, type, upload_date, **storage_path**, **storage_url**, **status** (`processing` \| `pending_review` \| `approved` \| `error`), **summary** |
 | `entities` | Graph nodes | id, type (Equipment/Component/WorkOrder/Procedure/Standard), name, properties (JSONB), **source_document_id**, **source_page**, **is_locked** |
 | `entity_relationships` | Graph edges | source_id, target_id, relationship_type (HAS_PART/MAINTAINED_BY/GOVERNED_BY) |
 | `vector_chunks` | RAG text chunks | id, document_id, text, embedding (vector), **page_number**, **section_heading**, **char_start**, **char_end**, **is_locked** |
-| `users` / `sessions` | Auth for demo users | standard Supabase auth tables |
+| `users` | Auth for users | id, email, hashed_password, full_name, role, company, created_at |
 
 The bolded columns are what make citations possible — every retrievable unit (a chunk, an entity) carries a pointer back to the exact document and location it came from, not just the document as a whole. `status` gates queryability; `is_locked` protects human edits from being overwritten by a re-extraction pass.
 

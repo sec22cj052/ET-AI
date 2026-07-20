@@ -1,8 +1,12 @@
 import { Outlet, Link, useLocation } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
+import { useState } from 'react';
 
 export default function MainLayout() {
   const location = useLocation();
   const path = location.pathname;
+  const { user, logout } = useAuth();
+  const [profileOpen, setProfileOpen] = useState(false);
 
   return (
     <div className="bg-background text-on-surface overflow-hidden h-screen flex w-full">
@@ -17,14 +21,18 @@ export default function MainLayout() {
         </div>
         
         <nav className="flex-1 px-2 py-4 space-y-1">
-          <Link to="/admin" className={`flex items-center gap-3 px-4 py-3 rounded-sm transition-all duration-200 ${path === '/admin' ? 'bg-secondary-container text-on-secondary-container font-bold border-l-2 border-primary' : 'text-on-surface-variant hover:bg-surface-container-high'}`}>
-            <span className="material-symbols-outlined" data-icon="upload_file">upload_file</span>
-            <span className="font-label-md text-label-md">Document Ingestion</span>
-          </Link>
-          <Link to="/verification" className={`flex items-center gap-3 px-4 py-3 rounded-sm transition-all duration-200 ${path === '/verification' ? 'bg-secondary-container text-on-secondary-container font-bold border-l-2 border-primary' : 'text-on-surface-variant hover:bg-surface-container-high'}`}>
-            <span className="material-symbols-outlined" data-icon="rule">rule</span>
-            <span className="font-label-md text-label-md">HITL Verification</span>
-          </Link>
+          {user?.role === 'admin' && (
+            <>
+              <Link to="/admin" className={`flex items-center gap-3 px-4 py-3 rounded-sm transition-all duration-200 ${path === '/admin' ? 'bg-secondary-container text-on-secondary-container font-bold border-l-2 border-primary' : 'text-on-surface-variant hover:bg-surface-container-high'}`}>
+                <span className="material-symbols-outlined" data-icon="upload_file">upload_file</span>
+                <span className="font-label-md text-label-md">Document Ingestion</span>
+              </Link>
+              <Link to="/verification" className={`flex items-center gap-3 px-4 py-3 rounded-sm transition-all duration-200 ${path === '/verification' ? 'bg-secondary-container text-on-secondary-container font-bold border-l-2 border-primary' : 'text-on-surface-variant hover:bg-surface-container-high'}`}>
+                <span className="material-symbols-outlined" data-icon="rule">rule</span>
+                <span className="font-label-md text-label-md">HITL Verification</span>
+              </Link>
+            </>
+          )}
           <Link to="/copilot" className={`flex items-center gap-3 px-4 py-3 rounded-sm transition-all duration-200 ${path === '/copilot' ? 'bg-secondary-container text-on-secondary-container font-bold border-l-2 border-primary' : 'text-on-surface-variant hover:bg-surface-container-high'}`}>
             <span className="material-symbols-outlined" data-icon="smart_toy">smart_toy</span>
             <span className="font-label-md text-label-md">Expert Copilot</span>
@@ -84,8 +92,30 @@ export default function MainLayout() {
               <span className="material-symbols-outlined text-on-surface-variant cursor-pointer hover:text-primary transition-colors" data-icon="notifications">notifications</span>
               <span className="material-symbols-outlined text-on-surface-variant cursor-pointer hover:text-primary transition-colors" data-icon="settings">settings</span>
             </div>
-            <div className="h-8 w-8 rounded-full overflow-hidden border border-outline-variant">
-              <img className="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAwKv73DVOth76tZT4dO-OCZGLv3SuFyYvy4pluUWeWXs65z3-S55Ty8C69e6y1PMTR8aGfX7CzXUOZ-JHR0eZK4bbNI1n9yclwJavVGRevsAv3lHoKT6j-MCwUheiJ0M9pAHoioadL45ObvabqXUdHph29jlALYHIwtggOY4F5SWgbqSBY_I4IxFAA-IeOAj27Ji9e8KQvOOsG5BSUtDffIJBuy9v83Jg2umFAExbeaOW9RZfuRUXkpQ" alt="User Avatar" />
+            <div className="relative">
+              <button onClick={() => setProfileOpen(!profileOpen)} className="flex items-center gap-2 hover:bg-surface-container-low p-1 rounded-md transition-colors">
+                <div className="flex flex-col items-end hidden sm:flex">
+                  <span className="text-label-md font-bold text-on-surface">{user?.full_name}</span>
+                  <span className="text-[10px] uppercase font-bold text-primary tracking-wider">{user?.role}</span>
+                </div>
+                <div className="h-9 w-9 rounded-full overflow-hidden border border-outline-variant bg-primary text-white flex items-center justify-center font-bold">
+                  {user?.full_name?.charAt(0).toUpperCase() || 'U'}
+                </div>
+              </button>
+              
+              {profileOpen && (
+                <div className="absolute right-0 mt-2 w-56 bg-white border border-outline-variant rounded-xl shadow-lg z-50 overflow-hidden">
+                  <div className="p-4 border-b border-outline-variant bg-surface-container-lowest">
+                    <p className="text-body-sm font-bold text-on-surface truncate">{user?.full_name}</p>
+                    <p className="text-label-sm text-on-surface-variant truncate">{user?.email}</p>
+                    {user?.company && <p className="text-label-sm text-on-surface-variant mt-1">🏢 {user.company}</p>}
+                  </div>
+                  <button onClick={logout} className="w-full text-left px-4 py-3 text-red-600 hover:bg-red-50 text-label-md font-bold flex items-center gap-2 transition-colors">
+                    <span className="material-symbols-outlined text-[18px]">logout</span>
+                    Sign out
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </header>

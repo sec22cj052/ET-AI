@@ -63,3 +63,22 @@ async def extract_from_image(image_bytes: bytes, page_number: int) -> List[Dict[
     # For this hackathon scope, we assume text extraction handles the bulk, 
     # but this stub demonstrates where vision extraction plugs in.
     return []
+
+
+async def generate_document_summary(full_text: str) -> str:
+    """Generates a 2-3 sentence plain-English summary of the document for HITL review."""
+    llm = get_llm()
+    prompt = f"""You are an industrial document analyst. Summarize the following document in 2-3 concise sentences.
+Focus on: what type of document it is, which equipment/assets it covers, and the key action or finding.
+Do NOT use bullet points. Write in professional prose.
+
+Document Text (truncated to first 3000 chars):
+{full_text[:3000]}"""
+
+    try:
+        from langchain_core.messages import HumanMessage
+        result = await llm.ainvoke([HumanMessage(content=prompt)])
+        return result.content.strip()
+    except Exception as e:
+        print(f"Summary generation error: {e}")
+        return ""

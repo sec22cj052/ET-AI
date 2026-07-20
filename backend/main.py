@@ -12,6 +12,7 @@ from routers.copilot import router as copilot_router
 from routers.rca import router as rca_router
 from routers.compliance import router as compliance_router
 from routers.lessons import router as lessons_router
+from routers.auth import router as auth_router
 from worker import document_worker
 
 load_dotenv()
@@ -50,6 +51,7 @@ async def shutdown_event():
     await close_db_pool()
 
 # Include routers
+app.include_router(auth_router)
 app.include_router(ingest_router)
 app.include_router(graph_router)
 app.include_router(copilot_router)

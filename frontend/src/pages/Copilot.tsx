@@ -44,7 +44,6 @@ export default function Copilot() {
     setMessages(prev => [...prev, { role: 'user', content: question }]);
 
     // Add placeholder AI message
-    const aiMsgIdx = messages.length + 1;
     setMessages(prev => [...prev, { role: 'assistant', content: '', streaming: true }]);
 
     try {

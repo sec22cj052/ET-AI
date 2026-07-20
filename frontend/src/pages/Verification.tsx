@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import ForceGraph2D from 'react-force-graph-2d';
 
 interface Document {
   id: string;
@@ -7,6 +8,7 @@ interface Document {
   upload_date: string;
   storage_url: string;
   status: string;
+  summary?: string;
 }
 
 interface Entity {
@@ -25,6 +27,20 @@ interface Chunk {
   is_locked?: boolean;
 }
 
+interface RuleResult {
+  id: string;
+  name: string;
+  weight: number;
+  passed: boolean;
+  detail: string;
+  description: string;
+}
+
+interface Confidence {
+  score: number;
+  rules: RuleResult[];
+}
+
 const STATUS_COLORS: Record<string, string> = {
   processing: 'bg-blue-100 text-blue-800 border-blue-200',
   pending_review: 'bg-orange-100 text-orange-800 border-orange-200',
@@ -32,49 +48,93 @@ const STATUS_COLORS: Record<string, string> = {
   failed: 'bg-red-100 text-red-800 border-red-200',
 };
 
+const TYPE_COLORS: Record<string, string> = {
+  Equipment: '#004ac6',
+  Component: '#475c0f',
+  WorkOrder: '#775a00',
+  Standard: '#7c3aed',
+  Procedure: '#be185d',
+  Default: '#737686',
+};
+
+// Radial gauge component
+function ConfidenceGauge({ score }: { score: number }) {
+  const radius = 40;
+  const circumference = 2 * Math.PI * radius;
+  const offset = circumference - (score / 100) * circumference;
+  const color = score >= 80 ? '#65a30d' : score >= 50 ? '#d97706' : '#dc2626';
+
+  return (
+    <div className="relative flex items-center justify-center" style={{ width: 100, height: 100 }}>
+      <svg width="100" height="100" viewBox="0 0 100 100" className="-rotate-90">
+        <circle cx="50" cy="50" r={radius} fill="none" stroke="#e5e7eb" strokeWidth="8" />
+        <circle
+          cx="50" cy="50" r={radius} fill="none" stroke={color} strokeWidth="8"
+          strokeLinecap="round"
+          strokeDasharray={circumference}
+          strokeDashoffset={offset}
+          style={{ transition: 'stroke-dashoffset 0.8s ease-in-out' }}
+        />
+      </svg>
+      <div className="absolute flex flex-col items-center">
+        <span className="text-2xl font-black" style={{ color }}>{score}</span>
+        <span className="text-[10px] text-on-surface-variant font-semibold uppercase tracking-wider">Score</span>
+      </div>
+    </div>
+  );
+}
+
 export default function Verification() {
   const [documents, setDocuments] = useState<Document[]>([]);
   const [statusFilter, setStatusFilter] = useState<string>('pending_review');
   const [selectedDocId, setSelectedDocId] = useState<string | null>(null);
-  
+
   const [docDetails, setDocDetails] = useState<Document | null>(null);
   const [entities, setEntities] = useState<Entity[]>([]);
   const [chunks, setChunks] = useState<Chunk[]>([]);
-  
+  const [confidence, setConfidence] = useState<Confidence | null>(null);
+
   const [loadingList, setLoadingList] = useState(true);
   const [loadingDetails, setLoadingDetails] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [activeTab, setActiveTab] = useState<'chunks' | 'entities'>('chunks');
+  const [showRawData, setShowRawData] = useState(false);
+  const [activeRawTab, setActiveRawTab] = useState<'chunks' | 'entities'>('chunks');
   const [editingChunkId, setEditingChunkId] = useState<string | null>(null);
   const [editChunkText, setEditChunkText] = useState('');
-  
+  const [showRules, setShowRules] = useState(false);
+
   const [feedback, setFeedback] = useState('');
   const [improving, setImproving] = useState(false);
   const [approving, setApproving] = useState(false);
 
-  useEffect(() => {
-    fetchDocuments();
-  }, []);
+  const miniGraphRef = useRef<HTMLDivElement>(null);
+  const [miniGraphDims, setMiniGraphDims] = useState({ width: 300, height: 250 });
+
+  useEffect(() => { fetchDocuments(); }, []);
+  useEffect(() => { if (selectedDocId) fetchDocumentDetails(selectedDocId); }, [selectedDocId]);
 
   useEffect(() => {
-    if (selectedDocId) {
-      fetchDocumentDetails(selectedDocId);
+    if (miniGraphRef.current) {
+      const obs = new ResizeObserver(() => {
+        if (miniGraphRef.current) {
+          setMiniGraphDims({ width: miniGraphRef.current.clientWidth, height: 250 });
+        }
+      });
+      obs.observe(miniGraphRef.current);
+      return () => obs.disconnect();
     }
-  }, [selectedDocId]);
+  }, [docDetails]);
 
   const fetchDocuments = async () => {
     setLoadingList(true);
     try {
       const res = await fetch('http://localhost:8000/ingest/list');
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
-      setDocuments(data);
+      setDocuments(await res.json());
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to load document list');
-    } finally {
-      setLoadingList(false);
-    }
+      setError(err instanceof Error ? err.message : 'Failed to load');
+    } finally { setLoadingList(false); }
   };
 
   const fetchDocumentDetails = async (id: string) => {
@@ -82,6 +142,7 @@ export default function Verification() {
     setError(null);
     setEditingChunkId(null);
     setFeedback('');
+    setShowRawData(false);
     try {
       const res = await fetch(`http://localhost:8000/ingest/${id}/review`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -89,11 +150,10 @@ export default function Verification() {
       setDocDetails(data.document);
       setEntities(data.entities || []);
       setChunks(data.chunks || []);
+      setConfidence(data.confidence || null);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to load document details');
-    } finally {
-      setLoadingDetails(false);
-    }
+      setError(err instanceof Error ? err.message : 'Failed to load');
+    } finally { setLoadingDetails(false); }
   };
 
   const handleSaveChunk = async (chunkId: string) => {
@@ -104,13 +164,9 @@ export default function Verification() {
         body: JSON.stringify({ text: editChunkText })
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      
-      // Update local state to reflect edit and lock
       setChunks(chunks.map(c => c.id === chunkId ? { ...c, text: editChunkText, is_locked: true } : c));
       setEditingChunkId(null);
-    } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : 'Failed to save chunk');
-    }
+    } catch (err: unknown) { alert(err instanceof Error ? err.message : 'Failed'); }
   };
 
   const handleImprove = async () => {
@@ -123,94 +179,91 @@ export default function Verification() {
         body: JSON.stringify({ feedback })
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      
-      // The backend puts it back into 'processing'
-      // We should clear selection and refresh list
       setFeedback('');
       setSelectedDocId(null);
       setDocDetails(null);
       await fetchDocuments();
       alert("Document sent back to AI for re-processing. Locked edits were preserved.");
-    } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : 'Failed to trigger AI improvement');
-    } finally {
-      setImproving(false);
-    }
+    } catch (err: unknown) { alert(err instanceof Error ? err.message : 'Failed'); }
+    finally { setImproving(false); }
   };
 
   const handleApprove = async () => {
     if (!docDetails) return;
     setApproving(true);
     try {
-      const res = await fetch(`http://localhost:8000/ingest/${docDetails.id}/approve`, {
-        method: 'PUT'
-      });
+      const res = await fetch(`http://localhost:8000/ingest/${docDetails.id}/approve`, { method: 'PUT' });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      
       setDocDetails({ ...docDetails, status: 'approved' });
-      // Update list silently
       setDocuments(documents.map(d => d.id === docDetails.id ? { ...d, status: 'approved' } : d));
-    } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : 'Failed to approve document');
-    } finally {
-      setApproving(false);
-    }
+    } catch (err: unknown) { alert(err instanceof Error ? err.message : 'Failed'); }
+    finally { setApproving(false); }
   };
 
-  const highlightEntities = (text: string) => {
-    if (!entities.length) return text;
-    const names = entities.map(e => e.name).filter(Boolean);
-    if (!names.length) return text;
+  // Build key facts from entities
+  const keyFacts = entities.map(e => ({
+    field: e.type,
+    value: e.name,
+    source: e.source_page ? `Page ${e.source_page}` : 'N/A',
+    props: e.properties,
+  }));
 
-    const escapedNames = Array.from(new Set(names)).map(n => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
-    const regex = new RegExp(`\\b(${escapedNames.join('|')})\\b`, 'gi');
-
-    const parts = text.split(regex);
-    return parts.map((part, i) => {
-      const match = entities.find(e => e.name.toLowerCase() === part.toLowerCase());
-      if (match) {
-        return (
-          <mark key={i} className="bg-blue-100 text-blue-900 border border-blue-200 px-1 rounded cursor-help font-semibold" title={`Entity: ${match.type}`}>
-            {part}
-          </mark>
-        );
+  // Build mini-graph data from entities and relationships
+  const miniGraphData = (() => {
+    const nodes = entities.map(e => ({ id: e.id, label: e.name, type: e.type }));
+    // We don't have relationships in the review response, so we infer from entities
+    // Equipment <-> WorkOrder implicit links
+    const links: { source: string; target: string; label: string }[] = [];
+    const equipments = entities.filter(e => e.type === 'Equipment');
+    const workOrders = entities.filter(e => e.type === 'WorkOrder');
+    for (const eq of equipments) {
+      for (const wo of workOrders) {
+        links.push({ source: eq.id, target: wo.id, label: 'MAINTAINED_BY' });
       }
-      return part;
-    });
-  };
-
-  const navigateToPage = (page: number | null) => {
-    if (!page || !docDetails?.storage_url) return;
-    const viewer = document.getElementById('source-viewer') as HTMLIFrameElement;
-    if (viewer) {
-      const baseUrl = docDetails.storage_url.split('#')[0];
-      viewer.src = `${baseUrl}#page=${page}&view=FitH`;
     }
-  };
+    return { nodes, links };
+  })();
+
+  // Extract dates for timeline
+  const timelineDates = entities.flatMap(e => {
+    const dates = e.properties?.dates || [];
+    return dates.filter((d: string) => d).map((d: string) => ({ date: d, entity: e.name, type: e.type }));
+  });
+
+  const paintMiniNode = useCallback((node: any, ctx: CanvasRenderingContext2D) => {
+    const color = TYPE_COLORS[node.type] || TYPE_COLORS.Default;
+    const r = 6;
+    ctx.beginPath();
+    ctx.arc(node.x || 0, node.y || 0, r, 0, 2 * Math.PI);
+    ctx.fillStyle = color;
+    ctx.fill();
+    ctx.font = '4px Inter, sans-serif';
+    ctx.fillStyle = '#141b2b';
+    ctx.textAlign = 'center';
+    ctx.fillText(node.label || '', node.x || 0, (node.y || 0) + r + 5);
+  }, []);
 
   const filteredDocs = documents.filter(d => statusFilter === 'all' || d.status === statusFilter);
 
   return (
     <div className="flex h-full overflow-hidden bg-surface-container-lowest">
       {/* Left Panel: Document Queue */}
-      <div className="w-[380px] bg-white border-r border-outline-variant flex flex-col flex-shrink-0">
+      <div className="w-[320px] bg-white border-r border-outline-variant flex flex-col flex-shrink-0">
         <div className="p-5 border-b border-outline-variant flex-shrink-0">
           <h2 className="text-headline-md font-headline-md text-on-surface flex items-center gap-2">
             <span className="material-symbols-outlined text-primary">fact_check</span>
             HITL Verification
           </h2>
-          <p className="text-label-sm text-on-surface-variant mt-1">
-            Review and approve AI extraction
-          </p>
-          
+          <p className="text-label-sm text-on-surface-variant mt-1">Review AI extraction quality</p>
+
           <div className="mt-4 flex flex-wrap gap-2">
             {['pending_review', 'processing', 'approved', 'failed', 'all'].map(status => (
               <button
                 key={status}
                 onClick={() => setStatusFilter(status)}
                 className={`px-3 py-1 rounded-full text-label-sm capitalize transition-colors ${
-                  statusFilter === status 
-                    ? 'bg-primary text-on-primary' 
+                  statusFilter === status
+                    ? 'bg-primary text-on-primary'
                     : 'bg-surface-container hover:bg-surface-container-high text-on-surface-variant'
                 }`}
               >
@@ -230,31 +283,29 @@ export default function Verification() {
             <div className="text-center p-8 text-on-surface-variant text-label-md">
               No documents in this status.
             </div>
-          ) : (
-            filteredDocs.map(doc => (
-              <button
-                key={doc.id}
-                onClick={() => setSelectedDocId(doc.id)}
-                className={`w-full text-left p-3 rounded-md transition-colors border ${
-                  selectedDocId === doc.id 
-                    ? 'bg-secondary-container border-primary text-on-secondary-container' 
-                    : 'bg-white border-outline-variant hover:border-primary/50'
-                }`}
-              >
-                <p className="font-semibold text-body-md truncate" title={doc.filename}>{doc.filename}</p>
-                <div className="flex items-center gap-2 mt-1.5">
-                  <span className={`text-[10px] uppercase font-bold px-1.5 py-0.5 rounded border ${STATUS_COLORS[doc.status] || 'bg-gray-100'}`}>
-                    {doc.status.replace('_', ' ')}
-                  </span>
-                  <span className="text-label-sm text-on-surface-variant truncate">{doc.type}</span>
-                </div>
-              </button>
-            ))
-          )}
+          ) : filteredDocs.map(doc => (
+            <button
+              key={doc.id}
+              onClick={() => setSelectedDocId(doc.id)}
+              className={`w-full text-left p-3 rounded-md transition-colors border ${
+                selectedDocId === doc.id
+                  ? 'bg-secondary-container border-primary text-on-secondary-container'
+                  : 'bg-white border-outline-variant hover:border-primary/50'
+              }`}
+            >
+              <p className="font-semibold text-body-md truncate" title={doc.filename}>{doc.filename}</p>
+              <div className="flex items-center gap-2 mt-1.5">
+                <span className={`text-[10px] uppercase font-bold px-1.5 py-0.5 rounded border ${STATUS_COLORS[doc.status] || 'bg-gray-100'}`}>
+                  {doc.status.replace('_', ' ')}
+                </span>
+                <span className="text-label-sm text-on-surface-variant truncate">{doc.type}</span>
+              </div>
+            </button>
+          ))}
         </div>
       </div>
 
-      {/* Right Panel: Review Workspace */}
+      {/* Right Panel: Document Intelligence Report */}
       <div className="flex-1 flex flex-col overflow-hidden relative">
         {!selectedDocId ? (
           <div className="flex-1 flex flex-col items-center justify-center text-on-surface-variant gap-4">
@@ -264,27 +315,36 @@ export default function Verification() {
         ) : loadingDetails ? (
           <div className="flex-1 flex flex-col items-center justify-center gap-3">
             <span className="material-symbols-outlined text-4xl text-primary animate-spin">progress_activity</span>
-            <p className="text-body-md">Loading extraction details...</p>
+            <p className="text-body-md">Loading intelligence report...</p>
+          </div>
+        ) : error ? (
+          <div className="flex-1 flex flex-col items-center justify-center gap-3">
+            <span className="material-symbols-outlined text-4xl text-red-500">error</span>
+            <p className="text-body-md text-red-700">{error}</p>
           </div>
         ) : docDetails ? (
           <>
-            {/* Toolbar Header */}
+            {/* Toolbar Header with Confidence Gauge */}
             <div className="bg-white border-b border-outline-variant p-4 flex items-center justify-between flex-shrink-0 z-10 shadow-sm">
-              <div>
-                <h1 className="text-headline-sm font-headline-sm text-on-surface flex items-center gap-2">
-                  {docDetails.filename}
-                  <a href={docDetails.storage_url} target="_blank" rel="noopener noreferrer" className="text-primary hover:bg-primary-container p-1 rounded-full transition-colors flex items-center" title="Open Original File">
-                    <span className="material-symbols-outlined text-[18px]">open_in_new</span>
-                  </a>
-                </h1>
-                <div className="flex items-center gap-3 mt-1">
-                  <span className={`text-label-sm font-semibold px-2 py-0.5 rounded border ${STATUS_COLORS[docDetails.status] || 'bg-gray-100'}`}>
-                    {docDetails.status.replace('_', ' ').toUpperCase()}
-                  </span>
-                  <span className="text-label-sm text-on-surface-variant">Type: {docDetails.type}</span>
+              <div className="flex items-center gap-5">
+                {confidence && <ConfidenceGauge score={confidence.score} />}
+                <div>
+                  <h1 className="text-headline-sm font-headline-sm text-on-surface flex items-center gap-2">
+                    {docDetails.filename}
+                    <a href={docDetails.storage_url} target="_blank" rel="noopener noreferrer" className="text-primary hover:bg-primary-container p-1 rounded-full transition-colors flex items-center" title="Open Original">
+                      <span className="material-symbols-outlined text-[18px]">open_in_new</span>
+                    </a>
+                  </h1>
+                  <div className="flex items-center gap-3 mt-1">
+                    <span className={`text-label-sm font-semibold px-2 py-0.5 rounded border ${STATUS_COLORS[docDetails.status] || 'bg-gray-100'}`}>
+                      {docDetails.status.replace('_', ' ').toUpperCase()}
+                    </span>
+                    <span className="text-label-sm text-on-surface-variant">Type: {docDetails.type}</span>
+                    <span className="text-label-sm text-on-surface-variant">{chunks.length} chunks · {entities.length} entities</span>
+                  </div>
                 </div>
               </div>
-              
+
               <div className="flex items-center gap-3">
                 {docDetails.status === 'pending_review' && (
                   <button
@@ -302,17 +362,16 @@ export default function Verification() {
               </div>
             </div>
 
+            {/* Main Content: Intelligence Report */}
             <div className="flex-1 flex overflow-hidden">
-              {/* Source Document Viewer (Innovation Sync) */}
+              {/* Source Document Viewer */}
               <div className="w-5/12 border-r border-outline-variant bg-surface-container-lowest flex flex-col relative hidden lg:flex">
-                <div className="bg-surface-container-low border-b border-outline-variant p-2 flex items-center justify-between shadow-sm z-10">
-                  <span className="text-label-sm font-bold text-on-surface flex items-center gap-2">
-                    <span className="material-symbols-outlined text-[16px]">picture_as_pdf</span>
-                    Source Document Sync
-                  </span>
+                <div className="bg-surface-container-low border-b border-outline-variant p-2 flex items-center gap-2 shadow-sm z-10">
+                  <span className="material-symbols-outlined text-[16px]">picture_as_pdf</span>
+                  <span className="text-label-sm font-bold text-on-surface">Source Document</span>
                 </div>
                 {docDetails.storage_url && docDetails.storage_url !== '#' ? (
-                  <iframe 
+                  <iframe
                     id="source-viewer"
                     src={`${docDetails.storage_url}#view=FitH`}
                     className="w-full h-full border-none"
@@ -321,156 +380,259 @@ export default function Verification() {
                 ) : (
                   <div className="flex-1 flex flex-col items-center justify-center text-on-surface-variant p-6 text-center">
                     <span className="material-symbols-outlined text-4xl mb-2 opacity-50">link_off</span>
-                    <p className="text-body-md font-semibold">No Real File URL</p>
-                    <p className="text-body-sm mt-1">This is synthetic data. In production, the actual PDF/Image renders here and auto-scrolls to the exact page when you click chunks.</p>
+                    <p className="text-body-md font-semibold">Source Preview</p>
+                    <p className="text-body-sm mt-1">In production, the actual PDF renders here with page-sync.</p>
                   </div>
                 )}
               </div>
 
-              {/* Main Content Area */}
-              <div className="flex-1 flex flex-col overflow-hidden bg-white">
-                {/* Tabs */}
-                <div className="flex border-b border-outline-variant">
-                  <button 
-                    onClick={() => setActiveTab('chunks')}
-                    className={`flex-1 py-3 text-label-md font-bold text-center border-b-2 transition-colors ${activeTab === 'chunks' ? 'border-primary text-primary' : 'border-transparent text-on-surface-variant hover:bg-surface-container-low'}`}
-                  >
-                    Text Chunks ({chunks.length})
-                  </button>
-                  <button 
-                    onClick={() => setActiveTab('entities')}
-                    className={`flex-1 py-3 text-label-md font-bold text-center border-b-2 transition-colors ${activeTab === 'entities' ? 'border-primary text-primary' : 'border-transparent text-on-surface-variant hover:bg-surface-container-low'}`}
-                  >
-                    Structured Entities ({entities.length})
-                  </button>
-                </div>
+              {/* Intelligence Report Panel */}
+              <div className="flex-1 flex flex-col overflow-hidden">
+                <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
 
-                {/* Tab Content */}
-                <div className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar">
-                  {activeTab === 'chunks' && (
-                    chunks.map(chunk => (
-                      <div key={chunk.id} className="border border-outline-variant rounded-lg p-4 bg-surface-container-lowest hover:border-primary/30 transition-colors">
-                        <div className="flex justify-between items-start mb-2">
-                          <button 
-                            onClick={() => navigateToPage(chunk.page_number)}
-                            className="text-label-sm font-mono text-outline hover:text-primary flex items-center gap-1 transition-colors"
-                            title="Navigate source document to this page"
-                          >
-                            <span className="material-symbols-outlined text-[14px]">find_in_page</span>
-                            Page {chunk.page_number ?? 'N/A'}
-                          </button>
-                          <div className="flex items-center gap-2">
-                            {chunk.is_locked && (
-                              <span className="text-orange-500 flex items-center gap-1 text-label-sm" title="Locked: Will not be overwritten by AI">
-                                <span className="material-symbols-outlined text-[16px]">lock</span>
-                                Protected
-                              </span>
-                            )}
-                            {editingChunkId !== chunk.id && (
-                              <button 
-                                onClick={() => {
-                                  setEditingChunkId(chunk.id);
-                                  setEditChunkText(chunk.text);
-                                }}
-                                className="text-primary hover:bg-primary-container p-1 rounded-sm"
-                                title="Edit Chunk"
-                              >
-                                <span className="material-symbols-outlined text-[18px]">edit</span>
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                        
-                        {editingChunkId === chunk.id ? (
-                          <div className="mt-2 space-y-2">
-                            <textarea
-                              value={editChunkText}
-                              onChange={(e) => setEditChunkText(e.target.value)}
-                              className="w-full h-32 p-3 border border-primary rounded-sm text-body-md focus:outline-none focus:ring-1 focus:ring-primary"
-                            />
-                            <div className="flex gap-2 justify-end">
-                              <button onClick={() => setEditingChunkId(null)} className="px-3 py-1.5 text-label-sm text-on-surface-variant hover:bg-surface-container rounded-sm">Cancel</button>
-                              <button onClick={() => handleSaveChunk(chunk.id)} className="px-3 py-1.5 bg-primary text-on-primary text-label-sm rounded-sm font-semibold">Save & Lock</button>
-                            </div>
-                          </div>
-                        ) : (
-                          <p className="text-body-md text-on-surface whitespace-pre-wrap leading-relaxed">
-                            {highlightEntities(chunk.text)}
-                          </p>
-                        )}
+                  {/* AI Summary Card */}
+                  {docDetails.summary && (
+                    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-5">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="material-symbols-outlined text-blue-600">auto_awesome</span>
+                        <h3 className="text-title-md font-bold text-blue-900">AI Document Summary</h3>
                       </div>
-                    ))
-                  )}
-
-                  {activeTab === 'entities' && (
-                    <div className="grid grid-cols-1 gap-4">
-                      {entities.map(ent => (
-                        <div key={ent.id} className="border border-outline-variant rounded-lg p-4 bg-surface-container-lowest">
-                          <div className="flex justify-between items-start mb-3">
-                            <div className="flex items-center gap-2">
-                              <span className="bg-primary/10 text-primary px-2 py-0.5 rounded text-label-sm font-bold border border-primary/20">{ent.type}</span>
-                              <span className="text-body-lg font-semibold text-on-surface">{ent.name}</span>
-                            </div>
-                            <button 
-                              onClick={() => navigateToPage(ent.source_page)}
-                              className="text-label-sm text-outline hover:text-primary flex items-center gap-1 transition-colors"
-                            >
-                              <span className="material-symbols-outlined text-[14px]">find_in_page</span>
-                              Page {ent.source_page ?? 'N/A'}
-                            </button>
-                          </div>
-                          
-                          <div className="bg-surface-container-low rounded p-3 border border-outline-variant/50 font-mono text-sm overflow-x-auto text-on-surface-variant">
-                            {Object.entries(ent.properties || {}).map(([k, v]) => (
-                              <div key={k} className="flex py-1 border-b border-outline-variant/30 last:border-0">
-                                <span className="w-1/3 text-on-surface font-semibold truncate pr-2" title={k}>{k}:</span>
-                                <span className="w-2/3 break-words">{typeof v === 'object' ? JSON.stringify(v) : String(v)}</span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      ))}
+                      <p className="text-body-md text-blue-900 leading-relaxed">{docDetails.summary}</p>
                     </div>
                   )}
-                </div>
-              </div>
 
-              {/* Right Sidebar: AI Improvement Panel */}
-              <div className="w-[320px] bg-surface-container-lowest border-l border-outline-variant p-5 flex flex-col flex-shrink-0">
-                <h3 className="text-title-md font-title-md text-on-surface flex items-center gap-2 mb-4">
-                  <span className="material-symbols-outlined text-primary">auto_awesome</span>
-                  Improve with AI
-                </h3>
-                
-                <div className="bg-blue-50 border border-blue-100 p-3 rounded-md mb-4 text-body-sm text-blue-900">
-                  <p>Noticed missing or incorrect data? Provide feedback to the AI and re-run extraction.</p>
-                  <p className="mt-2 font-semibold">Note: Locked (edited) rows will be preserved.</p>
-                </div>
-                
-                <textarea
-                  value={feedback}
-                  onChange={(e) => setFeedback(e.target.value)}
-                  placeholder="e.g., 'Extract the secondary valve parameters from page 12'"
-                  className="w-full h-32 p-3 border border-outline-variant rounded-sm text-body-md mb-3 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary resize-none custom-scrollbar"
-                />
-                
-                <button
-                  onClick={handleImprove}
-                  disabled={!feedback.trim() || improving || docDetails.status !== 'pending_review'}
-                  className="w-full bg-secondary text-on-secondary py-2.5 rounded-sm font-label-md transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-                >
-                  {improving ? (
-                    <>
-                      <span className="material-symbols-outlined animate-spin text-[18px]">sync</span>
-                      Re-processing...
-                    </>
-                  ) : (
-                    <>
-                      <span className="material-symbols-outlined text-[18px]">psychology</span>
-                      Re-Extract with AI
-                    </>
+                  {/* Confidence Rules Breakdown */}
+                  {confidence && (
+                    <div className="border border-outline-variant rounded-xl overflow-hidden">
+                      <button
+                        onClick={() => setShowRules(!showRules)}
+                        className="w-full flex items-center justify-between p-4 bg-surface-container-lowest hover:bg-surface-container-low transition-colors"
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className="material-symbols-outlined text-primary">checklist</span>
+                          <span className="text-title-md font-bold text-on-surface">Quality Rules ({confidence.rules.filter(r => r.passed).length}/{confidence.rules.length} passed)</span>
+                        </div>
+                        <span className="material-symbols-outlined text-on-surface-variant">{showRules ? 'expand_less' : 'expand_more'}</span>
+                      </button>
+                      {showRules && (
+                        <div className="border-t border-outline-variant divide-y divide-outline-variant">
+                          {confidence.rules.map(rule => (
+                            <div key={rule.id} className="flex items-start gap-3 p-3 px-4">
+                              <span className={`material-symbols-outlined text-[20px] mt-0.5 ${rule.passed ? 'text-lime-600' : 'text-red-500'}`}>
+                                {rule.passed ? 'check_circle' : 'cancel'}
+                              </span>
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-body-md font-semibold text-on-surface">{rule.name}</span>
+                                  <span className="text-label-sm text-on-surface-variant bg-surface-container px-1.5 py-0.5 rounded">{rule.weight}%</span>
+                                </div>
+                                <p className="text-body-sm text-on-surface-variant mt-0.5">{rule.detail}</p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   )}
-                </button>
+
+                  {/* Key Facts Table */}
+                  {keyFacts.length > 0 && (
+                    <div className="border border-outline-variant rounded-xl overflow-hidden">
+                      <div className="p-4 bg-surface-container-lowest flex items-center gap-2">
+                        <span className="material-symbols-outlined text-primary">table_chart</span>
+                        <h3 className="text-title-md font-bold text-on-surface">Key Facts Extracted</h3>
+                      </div>
+                      <table className="w-full">
+                        <thead>
+                          <tr className="bg-surface-container-low text-label-sm text-on-surface-variant uppercase tracking-wider">
+                            <th className="text-left p-3 border-t border-outline-variant">Type</th>
+                            <th className="text-left p-3 border-t border-outline-variant">Value</th>
+                            <th className="text-left p-3 border-t border-outline-variant">Source</th>
+                            <th className="text-left p-3 border-t border-outline-variant">Details</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-outline-variant">
+                          {keyFacts.map((fact, i) => (
+                            <tr key={i} className="hover:bg-surface-container-low transition-colors">
+                              <td className="p-3">
+                                <span className="bg-primary/10 text-primary px-2 py-0.5 rounded text-label-sm font-bold border border-primary/20">
+                                  {fact.field}
+                                </span>
+                              </td>
+                              <td className="p-3 text-body-md font-semibold text-on-surface">{fact.value}</td>
+                              <td className="p-3 text-body-sm text-on-surface-variant">{fact.source}</td>
+                              <td className="p-3 text-body-sm text-on-surface-variant font-mono">
+                                {fact.props && Object.keys(fact.props).length > 0
+                                  ? Object.entries(fact.props).map(([k, v]) => (
+                                      <span key={k} className="mr-2">{k}: {typeof v === 'object' ? JSON.stringify(v) : String(v)}</span>
+                                    ))
+                                  : '—'
+                                }
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+
+                  {/* Timeline */}
+                  {timelineDates.length > 0 && (
+                    <div className="border border-outline-variant rounded-xl p-4">
+                      <div className="flex items-center gap-2 mb-3">
+                        <span className="material-symbols-outlined text-primary">timeline</span>
+                        <h3 className="text-title-md font-bold text-on-surface">Event Timeline</h3>
+                      </div>
+                      <div className="flex items-center gap-2 overflow-x-auto pb-2">
+                        {timelineDates.map((item, i) => (
+                          <div key={i} className="flex items-center gap-2 flex-shrink-0">
+                            {i > 0 && <div className="w-8 h-px bg-outline-variant" />}
+                            <div className="flex flex-col items-center gap-1 px-3 py-2 bg-surface-container rounded-lg border border-outline-variant min-w-[120px]">
+                              <span className="text-label-sm font-bold text-primary">{item.date}</span>
+                              <span className="text-[11px] text-on-surface-variant">{item.entity}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Mini Relationship Graph */}
+                  {miniGraphData.nodes.length > 1 && (
+                    <div className="border border-outline-variant rounded-xl overflow-hidden">
+                      <div className="p-4 bg-surface-container-lowest flex items-center gap-2">
+                        <span className="material-symbols-outlined text-primary">hub</span>
+                        <h3 className="text-title-md font-bold text-on-surface">Entity Relationship Map</h3>
+                      </div>
+                      <div ref={miniGraphRef} className="bg-surface-dim/20" style={{ height: 250 }}>
+                        <ForceGraph2D
+                          graphData={miniGraphData}
+                          width={miniGraphDims.width}
+                          height={250}
+                          nodeCanvasObject={paintMiniNode}
+                          nodeCanvasObjectMode={() => 'replace'}
+                          linkLabel={(link: any) => link.label || ''}
+                          linkColor={() => '#c3c6d7'}
+                          linkWidth={1.5}
+                          linkDirectionalArrowLength={4}
+                          linkDirectionalArrowRelPos={1}
+                          backgroundColor="#f9f9ff"
+                          cooldownTicks={50}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Collapsible Raw Data Drawer */}
+                  <div className="border border-outline-variant rounded-xl overflow-hidden">
+                    <button
+                      onClick={() => setShowRawData(!showRawData)}
+                      className="w-full flex items-center justify-between p-4 bg-surface-container-lowest hover:bg-surface-container-low transition-colors"
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="material-symbols-outlined text-on-surface-variant">data_object</span>
+                        <span className="text-title-md font-bold text-on-surface">Raw Extraction Data</span>
+                        <span className="text-label-sm text-on-surface-variant">(Advanced)</span>
+                      </div>
+                      <span className="material-symbols-outlined text-on-surface-variant">{showRawData ? 'expand_less' : 'expand_more'}</span>
+                    </button>
+
+                    {showRawData && (
+                      <div className="border-t border-outline-variant">
+                        {/* Tabs */}
+                        <div className="flex border-b border-outline-variant">
+                          <button
+                            onClick={() => setActiveRawTab('chunks')}
+                            className={`flex-1 py-2.5 text-label-md font-bold text-center border-b-2 transition-colors ${activeRawTab === 'chunks' ? 'border-primary text-primary' : 'border-transparent text-on-surface-variant'}`}
+                          >
+                            Text Chunks ({chunks.length})
+                          </button>
+                          <button
+                            onClick={() => setActiveRawTab('entities')}
+                            className={`flex-1 py-2.5 text-label-md font-bold text-center border-b-2 transition-colors ${activeRawTab === 'entities' ? 'border-primary text-primary' : 'border-transparent text-on-surface-variant'}`}
+                          >
+                            Entities ({entities.length})
+                          </button>
+                        </div>
+
+                        <div className="p-4 space-y-3 max-h-[400px] overflow-y-auto custom-scrollbar">
+                          {activeRawTab === 'chunks' && chunks.map(chunk => (
+                            <div key={chunk.id} className="border border-outline-variant rounded-lg p-3 bg-white text-sm">
+                              <div className="flex justify-between items-start mb-1">
+                                <span className="text-label-sm font-mono text-outline">Page {chunk.page_number ?? 'N/A'}</span>
+                                <div className="flex items-center gap-2">
+                                  {chunk.is_locked && (
+                                    <span className="text-orange-500 flex items-center gap-1 text-label-sm">
+                                      <span className="material-symbols-outlined text-[14px]">lock</span>
+                                    </span>
+                                  )}
+                                  {editingChunkId !== chunk.id && (
+                                    <button onClick={() => { setEditingChunkId(chunk.id); setEditChunkText(chunk.text); }}
+                                      className="text-primary hover:bg-primary-container p-0.5 rounded-sm">
+                                      <span className="material-symbols-outlined text-[16px]">edit</span>
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                              {editingChunkId === chunk.id ? (
+                                <div className="mt-1 space-y-2">
+                                  <textarea value={editChunkText} onChange={e => setEditChunkText(e.target.value)}
+                                    className="w-full h-24 p-2 border border-primary rounded-sm text-body-sm focus:outline-none focus:ring-1 focus:ring-primary" />
+                                  <div className="flex gap-2 justify-end">
+                                    <button onClick={() => setEditingChunkId(null)} className="px-2 py-1 text-label-sm text-on-surface-variant">Cancel</button>
+                                    <button onClick={() => handleSaveChunk(chunk.id)} className="px-2 py-1 bg-primary text-on-primary text-label-sm rounded-sm">Save & Lock</button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <p className="text-body-sm text-on-surface whitespace-pre-wrap leading-relaxed">{chunk.text}</p>
+                              )}
+                            </div>
+                          ))}
+
+                          {activeRawTab === 'entities' && entities.map(ent => (
+                            <div key={ent.id} className="border border-outline-variant rounded-lg p-3 bg-white text-sm">
+                              <div className="flex items-center gap-2 mb-2">
+                                <span className="bg-primary/10 text-primary px-1.5 py-0.5 rounded text-label-sm font-bold border border-primary/20">{ent.type}</span>
+                                <span className="font-semibold text-on-surface">{ent.name}</span>
+                                <span className="text-label-sm text-outline ml-auto">Page {ent.source_page ?? 'N/A'}</span>
+                              </div>
+                              <div className="bg-surface-container-low rounded p-2 font-mono text-xs text-on-surface-variant">
+                                {Object.entries(ent.properties || {}).map(([k, v]) => (
+                                  <div key={k}><span className="font-semibold text-on-surface">{k}:</span> {typeof v === 'object' ? JSON.stringify(v) : String(v)}</div>
+                                ))}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* AI Improvement Footer */}
+                {docDetails.status === 'pending_review' && (
+                  <div className="border-t border-outline-variant bg-white p-4 flex items-center gap-3 flex-shrink-0">
+                    <span className="material-symbols-outlined text-primary">auto_awesome</span>
+                    <input
+                      value={feedback}
+                      onChange={e => setFeedback(e.target.value)}
+                      placeholder="Provide feedback to re-extract with AI..."
+                      className="flex-1 px-3 py-2 border border-outline-variant rounded-sm text-body-md focus:outline-none focus:ring-1 focus:ring-primary"
+                      onKeyDown={e => { if (e.key === 'Enter') handleImprove(); }}
+                    />
+                    <button
+                      onClick={handleImprove}
+                      disabled={!feedback.trim() || improving}
+                      className="bg-secondary text-on-secondary px-4 py-2 rounded-sm font-label-md flex items-center gap-2 disabled:opacity-50"
+                    >
+                      {improving ? (
+                        <><span className="material-symbols-outlined animate-spin text-[18px]">sync</span> Processing...</>
+                      ) : (
+                        <><span className="material-symbols-outlined text-[18px]">psychology</span> Re-Extract</>
+                      )}
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           </>

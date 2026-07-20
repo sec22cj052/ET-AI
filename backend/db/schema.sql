@@ -8,7 +8,8 @@ CREATE TABLE documents (
     upload_date TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     storage_path TEXT,
     storage_url TEXT,
-    status TEXT DEFAULT 'pending_review'
+    status TEXT DEFAULT 'pending_review',
+    summary TEXT
 );
 
 CREATE TABLE entities (

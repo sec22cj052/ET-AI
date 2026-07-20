@@ -11,10 +11,10 @@ This is the execution-level companion to `CLAUDE.md` and `CONTRIBUTING.md`. Each
 
 ## Feature 1: Universal Document Ingestion & Knowledge Graph Pipeline
 
-**What it does:** Ingests PDFs, images (P&IDs), and CSV/XLSX (work orders), extracts entities, and builds both a vector index and a relational knowledge graph. Ends in a `pending_review` state — this feature produces the draft data that Feature 7 (HITL Verification) reviews and approves before it's queryable.
+**What it does:** Ingests PDFs, images (P&IDs), and CSV/XLSX (work orders), extracts entities, generates AI summaries, and builds both a vector index and a relational knowledge graph. Ends in a `pending_review` state — this feature produces the draft data that Feature 7 (HITL Verification) reviews and approves before it's queryable.
 
 **Data model**
-- `documents(id, filename, type, upload_date, storage_path, storage_url, status)` — status: `processing` | `pending_review` | `approved` | `failed`
+- `documents(id, filename, type, upload_date, storage_path, storage_url, status, summary)` — status: `processing` | `pending_review` | `approved` | `failed`
 - `entities(id, type, name, properties JSONB, source_document_id, source_page, is_locked)`
 - `entity_relationships(id, source_id, target_id, relationship_type)`
 - `vector_chunks(id, document_id, text, embedding, page_number, section_heading, char_start, char_end, is_locked)`
@@ -168,19 +168,19 @@ data: [DONE]
 **What it does:** Interactive visual view of the knowledge graph built in Feature 1 — lets users (primarily Reliability Engineer and Plant Manager personas) explore how Centrifugal Pump equipment, components, work orders, procedures, and standards connect, rather than only querying via chat.
 
 **Backend tasks**
-1. `GET /graph/explore/{entity_id}` — returns a node + its connected neighbors (1-2 hops) via the `entity_relationships` table, shaped for React Flow consumption:
+1. `GET /graph/explore/{entity_id}` — returns a node + its connected neighbors (1-2 hops) via the `entity_relationships` table, shaped for React Flow consumption. Also includes `GET /graph/explore/{entity_id}/documents` for associated approved documents. Node data includes `degree` and `source_document` metadata.
 ```json
 {
-  "nodes": [{ "id": "Pump-101", "type": "Equipment", "label": "Pump-101" }],
+  "nodes": [{ "id": "Pump-101", "type": "Equipment", "label": "Pump-101", "degree": 3, "source_document": "WO-489.pdf", "data": {} }],
   "edges": [{ "source": "Pump-101", "target": "WO-552", "relationship": "MAINTAINED_BY" }]
 }
 ```
 2. `GET /graph/explore` (no entity_id) — returns the full graph for the seeded Centrifugal Pump dataset, small enough at this scope to load in one call rather than paginating
 
 **Frontend tasks**
-- React Flow canvas rendering nodes (color-coded by type: Equipment/Component/WorkOrder/Procedure/Standard) and edges (labeled by relationship type)
-- Clicking a node opens a side panel with that entity's details and, if it's backed by a source document, the same citation-link pattern used elsewhere (opens the file at the relevant page)
-- Basic layout: force-directed or dagre auto-layout is sufficient — hand-tuned positioning is not required at this scope
+- React Flow canvas rendering nodes (color-coded by type, sized dynamically by connection degree) and edges (labeled by relationship type directly on canvas).
+- Global search bar and equipment dropdown filters.
+- Clicking a node opens a rich side panel with that entity's details, relationships, a link to the source document, and an "Ask Copilot" deep link button.
 
 **Definition of Done**
 - [x] Full Centrifugal Pump graph renders without manual node placement
@@ -199,16 +199,19 @@ Step 7: GET /graph/explore (Approval Gate): PASS - Endpoint successfully returne
 
 ## Feature 7: Human-in-the-Loop (HITL) Verification Dashboard
 
-**What it does:** Gates every ingested document behind human review before it's queryable. A reviewer inspects AI-extracted entities and chunks, edits them inline or requests an AI re-extraction pass with feedback, and explicitly approves before the document enters the live knowledge base.
+**What it does:** Gates every ingested document behind human review before it's queryable. A reviewer inspects AI-extracted entities, chunks, an AI-generated summary, and an AI confidence score (0-100%). It serves as a comprehensive "Document Intelligence Report" before explicitly approving it to enter the live knowledge base.
 
 **Why it exists:** raw AI extraction accuracy alone isn't enough for a system field technicians and compliance officers will trust — this is the accuracy guardrail that makes the "industry-grade" claim credible, and it directly strengthens the "entity extraction accuracy" judging criterion by showing an explicit correction loop rather than a one-shot pipeline.
 
 **Data model additions** (extends Feature 1's schema)
 - `documents.status`: `processing` | `pending_review` | `approved` | `failed`
+- `documents.summary`: AI-generated document summary
 - `entities.is_locked`, `vector_chunks.is_locked`: boolean, `false` by default, set `true` the moment a human manually edits that row
+- `users`: table tracking Admins and Operators for RBAC
 
 **Backend tasks**
-1. `GET /ingest/{document_id}/review` — returns the document plus all associated `entities`, `entity_relationships`, and `vector_chunks`
+1. `GET /ingest/{document_id}/review` — returns the document plus all associated `entities`, `entity_relationships`, `vector_chunks`, and the computed `confidence` score.
+1a. `GET /ingest/{document_id}/confidence` — evaluates 9 industry rules to score extraction quality.
 2. `PUT /ingest/chunk/{chunk_id}` — accepts edited chunk text, re-embeds via Cohere, updates the row, sets `is_locked = true`
 3. `PUT /ingest/entity/{entity_id}` — same pattern for entity property edits, sets `is_locked = true`
 4. `POST /ingest/{document_id}/improve` — accepts a natural-language feedback string:
@@ -219,8 +222,9 @@ Step 7: GET /graph/explore (Approval Gate): PASS - Endpoint successfully returne
 5. `PUT /ingest/{document_id}/approve` — flips `documents.status` to `approved`. This is the only path by which a document becomes queryable (see Feature 2 DoD)
 
 **Frontend tasks — `/admin/review/[id]/page.tsx`**
-- Split-screen viewer: extracted entities (Equipment, Work Orders, etc.) on one side, raw text chunks on the other
-- Inline editing on both sides — click a chunk or entity property, edit, save (triggers the lock)
+- Document Intelligence Report Layout: Features a Confidence Score Gauge, AI summary, Key Facts table, Timeline, and Mini Relationship Graph.
+- Advanced Drawer: The raw editable split-screen chunks and entities are neatly tucked into a collapsible advanced drawer to simplify the primary UX.
+- Inline editing on the advanced drawer sides — click a chunk, edit, save (triggers the lock)
 - Visual indicator (e.g. a lock icon) on any row that's been manually edited, so the reviewer can see what "Improve via AI" will and won't touch
 - Feedback text area + "Re-Extract with AI" button, calling `/improve`
 - Prominent "Approve & Commit to Knowledge Graph" action, calling `/approve`

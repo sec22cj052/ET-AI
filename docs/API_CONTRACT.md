@@ -30,6 +30,37 @@ All endpoints return this shape on failure (4xx/5xx):
 
 ---
 
+## Authentication & RBAC
+
+### `POST /auth/register`
+Registers a new user (Admin or Operator).
+**Request**
+```json
+{
+  "email": "user@company.com",
+  "password": "password123",
+  "full_name": "John Doe",
+  "role": "admin",
+  "company": "Acme Corp"
+}
+```
+
+### `POST /auth/login`
+Returns JWT access and refresh tokens.
+**Request**
+```json
+{ "email": "user@company.com", "password": "password123" }
+```
+**Response `200`**
+```json
+{ "access_token": "jwt...", "refresh_token": "jwt...", "token_type": "bearer" }
+```
+
+### `GET /auth/me`
+Returns the currently authenticated user's profile. Requires Bearer token.
+
+---
+
 ## Feature 1: Ingestion
 
 ### `POST /ingest/upload`
@@ -73,15 +104,30 @@ Returns the document plus all associated entities, relationships, and chunks for
 **Response `200`**
 ```json
 {
-  "document": { "id": "uuid", "filename": "Pump-101_OEM_Manual.pdf", "status": "pending_review", "storage_url": "https://..." },
+  "document": { "id": "uuid", "filename": "Pump-101_OEM_Manual.pdf", "status": "pending_review", "storage_url": "https://...", "summary": "AI generated summary..." },
   "entities": [
     { "id": "uuid", "type": "Equipment", "name": "Pump-101", "properties": { "operating_pressure": "12 bar" }, "source_page": 14, "is_locked": false }
   ],
-  "entity_relationships": [
-    { "source_id": "uuid", "target_id": "uuid", "relationship_type": "HAS_PART" }
-  ],
-  "vector_chunks": [
+  "chunks": [
     { "id": "uuid", "text": "...", "page_number": 14, "section_heading": "Operating Parameters", "is_locked": false }
+  ],
+  "confidence": {
+    "score": 85,
+    "rules": [
+      { "id": "equipment_tag", "name": "Equipment Tag Present", "weight": 15, "passed": true, "detail": "Found Pump-101" }
+    ]
+  }
+}
+```
+
+### `GET /ingest/{document_id}/confidence`
+Returns the standalone rules-based confidence score for an ingested document.
+**Response `200`**
+```json
+{
+  "score": 85,
+  "rules": [
+    { "id": "equipment_tag", "name": "Equipment Tag Present", "weight": 15, "passed": true, "detail": "Found Pump-101" }
   ]
 }
 ```
@@ -252,13 +298,29 @@ Returns a node and its connected neighbors (1-2 hops), shaped for React Flow.
 ```json
 {
   "nodes": [
-    { "id": "Pump-101", "type": "Equipment", "label": "Pump-101" },
-    { "id": "WO-552", "type": "WorkOrder", "label": "WO-552" }
+    { 
+      "id": "Pump-101", 
+      "type": "Equipment", 
+      "label": "Pump-101",
+      "data": { "operating_pressure": "12 bar" },
+      "degree": 3,
+      "source_document": "Pump-101_OEM_Manual.pdf",
+      "source_document_id": "uuid"
+    }
   ],
   "edges": [
     { "source": "Pump-101", "target": "WO-552", "relationship": "MAINTAINED_BY" }
   ]
 }
+```
+
+### `GET /graph/explore/{entity_id}/documents`
+Returns all approved documents that contain this entity.
+**Response `200`**
+```json
+[
+  { "id": "uuid", "filename": "Pump-101_OEM_Manual.pdf", "type": "manual", "status": "approved" }
+]
 ```
 
 ### `GET /graph/explore`

@@ -20,6 +20,7 @@ These decisions were made deliberately to reduce risk on a time-boxed build. If 
 | File storage | Supabase Storage | S3, local filesystem in production |
 | Hosting | Vercel (frontend), Render (backend), Supabase (DB) | AWS, GCP, Azure |
 | Graph model | Relational tables (`entities`, `entity_relationships`) queried via recursive CTEs | A dedicated graph database |
+| Authentication | JWT via `python-jose` and `bcrypt` | Supabase Auth, Auth0, Firebase |
 
 This has happened before on a related project: an AI coding session silently reverted a locked dependency choice back to a "default" the model was more familiar with. Treat this table as non-negotiable unless the user explicitly says otherwise in the current conversation.
 

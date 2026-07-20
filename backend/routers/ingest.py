@@ -7,8 +7,9 @@ from datetime import datetime
 
 from db.database import get_db
 from ingestion.parse import parse_pdf, parse_csv_or_excel
-from ingestion.extract import extract_entities_from_text
+from ingestion.extract import extract_entities_from_text, generate_document_summary
 from ingestion.chunk_embed import chunk_text, embed_chunks
+from ingestion.confidence import calculate_confidence_score
 
 from pydantic import BaseModel
 from typing import List, Optional
@@ -43,6 +44,9 @@ async def process_document_background(
         else:
             print(f"Unsupported file type for async processing: {file_path}")
             return
+
+        # Collect full text for summary generation
+        full_text = "\n\n".join(p["text"] for p in pages if p.get("text"))
             
         # 2. Extract Entities & Chunk/Embed
         for page in pages:
@@ -109,7 +113,15 @@ async def process_document_background(
                     document_id, chunk["text"], json.dumps(chunk["embedding"]), page_num
                 )
                 
-        await db.execute("UPDATE documents SET status = 'pending_review' WHERE id = $1", document_id)
+        # Generate AI summary for HITL review
+        summary = ""
+        if full_text.strip():
+            summary = await generate_document_summary(full_text)
+
+        await db.execute(
+            "UPDATE documents SET status = 'pending_review', summary = $2 WHERE id = $1", 
+            document_id, summary
+        )
         print(f"Successfully processed document {document_id}")
     except Exception as e:
         print(f"Failed to process document {document_id}: {e}")
@@ -162,7 +174,7 @@ async def list_documents(db: asyncpg.Connection = Depends(get_db)):
 
 @router.get("/{document_id}/review")
 async def get_document_review(document_id: str, db: asyncpg.Connection = Depends(get_db)):
-    doc = await db.fetchrow("SELECT id, filename, type, upload_date, storage_url, status FROM documents WHERE id = $1", document_id)
+    doc = await db.fetchrow("SELECT id, filename, type, upload_date, storage_url, status, summary FROM documents WHERE id = $1", document_id)
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
         
@@ -176,11 +188,23 @@ async def get_document_review(document_id: str, db: asyncpg.Connection = Depends
         d["properties"] = json.loads(d["properties"]) if isinstance(d["properties"], str) else d["properties"]
         parsed_entities.append(d)
         
+    # Calculate confidence score
+    confidence = await calculate_confidence_score(document_id, db)
+
     return {
         "document": dict(doc),
         "entities": parsed_entities,
-        "chunks": [dict(c) for c in chunks]
+        "chunks": [dict(c) for c in chunks],
+        "confidence": confidence
     }
+
+@router.get("/{document_id}/confidence")
+async def get_document_confidence(document_id: str, db: asyncpg.Connection = Depends(get_db)):
+    """Returns the rules-based confidence score for a document."""
+    doc = await db.fetchrow("SELECT id FROM documents WHERE id = $1", document_id)
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+    return await calculate_confidence_score(document_id, db)
 
 @router.put("/{document_id}/approve")
 async def approve_document(document_id: str, db: asyncpg.Connection = Depends(get_db)):

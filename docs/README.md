@@ -18,16 +18,13 @@ Every agent response includes clickable citations linking directly to the source
 ## Implementation Status
 **Implemented:**
 - All 7 core features are fully implemented, functional, and integrated.
+- **Role-Based Access Control (RBAC):** JWT Auth via `python-jose` and `bcrypt` separates Admin (Ingestion/Verification) from Operator (Copilot/Agents).
+- **HITL Confidence Scoring & Redesign:** AI provides a 0-100% confidence score across 9 industry rules. The UI features a Document Intelligence Report with AI summaries, timelines, and key facts.
+- **Knowledge Graph Innovations:** Nodes size dynamically by degree, edges are labeled directly on the canvas, and a rich inspector sidebar provides source tracebacks and "Ask Copilot" deep links.
 - End-to-end ingestion pipeline with Cohere Vision parsing.
 - Expert Knowledge Copilot with GraphRAG and citations.
 - Maintenance Intelligence (RCA) and Compliance Gap Analysis agents.
 - Lessons Learned pattern detection.
-- Knowledge Graph Explorer (React Flow).
-- HITL Verification Dashboard with chunk locking and AI re-extraction.
-
-**Remaining / Fast-Follows:**
-- *Entity Editing in HITL:* Currently, the verification dashboard allows viewing entities but editing is limited to raw chunks. Inline editing for JSON entity properties is a planned fast-follow.
-- *Real-world Data Load:* System is currently seeded with synthetic Centrifugal Pump data. Transitioning to real industrial P&IDs and manuals is the next phase.
 
 ## Tech Stack
 | Layer | Choice |
@@ -38,6 +35,7 @@ Every agent response includes clickable citations linking directly to the source
 | LLM | Cohere (command-r-08-2024) |
 | Embeddings | Cohere (embed-english-v3.0) |
 | Database | PostgreSQL (Supabase) + pgvector |
+| Authentication | JWT via `python-jose` and `bcrypt` |
 | File storage | Supabase Storage |
 | Hosting | Vercel (frontend) / Render (backend) / Supabase (DB) |
 
