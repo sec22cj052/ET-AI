@@ -1,0 +1,32 @@
+services:
+  - type: web
+    name: industrial-knowledge-backend
+    env: docker
+    dockerContext: ./backend
+    dockerfilePath: ./backend/Dockerfile
+    region: oregon
+    plan: free
+    envVars:
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_API_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: COHERE_API_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: VOYAGE_API_KEY
+        sync: false
+
+  - type: web
+    name: industrial-knowledge-frontend
+    env: docker
+    dockerContext: ./frontend
+    dockerfilePath: ./frontend/Dockerfile
+    region: oregon
+    plan: free
+    envVars:
+      - key: VITE_BACKEND_URL
+        sync: false

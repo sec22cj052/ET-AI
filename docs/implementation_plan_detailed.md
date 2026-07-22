@@ -272,3 +272,31 @@ Already detailed in `system_architecture_and_data_flow.md` Section 5 — impleme
 - [x] **HITL re-extraction scope:** whole-document re-extraction (not chunk-targeted), protected by an `is_locked` flag on manually-edited rows so human corrections are never silently overwritten. Vision is only re-run for image-sourced documents; text-sourced documents re-extract from cached parsed text.
 - [x] **Source Document Sync:** Left side of the dashboard embeds the original PDF/Image. Clicking chunks/entities auto-scrolls the viewer.
 - [x] **Entity Grounding:** Entities are dynamically highlighted in the text chunks.
+
+---
+
+## Feature 8: Tacit Knowledge Capture & Attrition Risk Engine
+
+**What it does:** Captures undocumented field insights ("tacit knowledge") from experienced operators and engineers, integrating them into the knowledge graph and surfacing equipment at high risk of knowledge loss due to attrition.
+
+**Data model additions**
+- `tacit_knowledge_notes`: stores contributor details, content, capture context, and trust tier (`unverified`, `peer_reviewed`, `sme_verified`).
+- `vector_chunks`: added `source_type` and `tacit_note_id` to link chunks to tacit notes.
+
+**Backend tasks**
+1. `POST /tacit-knowledge/capture` — captures a quick field insight.
+2. `PUT /tacit-knowledge/{note_id}/verify` — promotes trust tier.
+3. `POST /tacit-knowledge/exit-interview-submit` — captures multi-step exit interview data.
+4. `GET /agents/lessons/feed` — updated to return `attrition_risk` metrics.
+
+**Frontend tasks**
+- `TacitCaptureWidget.tsx`: Web Speech API integration for quick voice/text capture on the Knowledge Graph equipment nodes.
+- `ExitInterviewWizard.tsx`: Multi-step form for capturing insights from departing experts.
+- `Lessons.tsx`: Added an Attrition Risk dashboard.
+- `Copilot.tsx`: Updated to highlight tacit knowledge citations differently from formal documents.
+
+**Definition of Done**
+- [x] Schema updated and migrated.
+- [x] Tacit endpoints implemented and integrated with embeddings.
+- [x] Widgets built and embedded in the Graph Explorer and Copilot UI.
+- [x] Attrition risk surfaced in the Lessons Learned feed.

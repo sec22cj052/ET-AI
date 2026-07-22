@@ -2,7 +2,7 @@
 Project context and operating rules for any AI coding agent (Claude Code, Cursor, etc.) working in this repository.
 
 ## Project Overview
-Industrial Knowledge Intelligence Platform — ingests heterogeneous industrial documents (manuals, work orders, P&IDs, safety/compliance docs) scoped to **Centrifugal Pump** equipment, builds a queryable knowledge graph + vector index, and serves it through six features: Ingestion Pipeline, Expert Copilot (RAG/GraphRAG), Maintenance RCA Agent, Compliance Intelligence, Lessons Learned Engine, and a Knowledge Graph Explorer UI. Built for a hackathon demo at 40-50 concurrent users.
+Industrial Knowledge Intelligence Platform — ingests heterogeneous industrial documents (manuals, work orders, P&IDs, safety/compliance docs) scoped to **Centrifugal Pump** equipment, builds a queryable knowledge graph + vector index, and serves it through eight features: Ingestion Pipeline, Expert Copilot (RAG/GraphRAG), Maintenance RCA Agent, Compliance Intelligence, Lessons Learned Engine, Knowledge Graph Explorer UI, HITL Verification Dashboard, and Tacit Knowledge Capture & Attrition Risk Engine. Built for a hackathon demo at 40-50 concurrent users.
 
 Read `docs/system_architecture_and_data_flow.md` and `docs/implementation_plan_detailed.md` before making any structural change. This file governs *how* to work in the repo; those files govern *what* to build.
 

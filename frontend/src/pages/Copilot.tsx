@@ -47,7 +47,7 @@ export default function Copilot() {
     setMessages(prev => [...prev, { role: 'assistant', content: '', streaming: true }]);
 
     try {
-      const res = await fetch('http://localhost:8000/query/copilot', {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000'}/query/copilot`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ question, session_id: null }),
@@ -283,19 +283,29 @@ export default function Copilot() {
           ) : activeCitations.map((c) => (
             <a
               key={c.index}
-              href={`${c.storage_url}#page=${c.page}`}
-              target="_blank"
-              rel="noopener noreferrer"
+              href={c.type === 'tacit_knowledge' ? '#' : `${c.storage_url}#page=${c.page}`}
+              target={c.type === 'tacit_knowledge' ? undefined : "_blank"}
+              rel={c.type === 'tacit_knowledge' ? undefined : "noopener noreferrer"}
               className="group flex items-start gap-3 p-3 border border-slate-100 rounded-lg hover:border-primary transition-all cursor-pointer block"
             >
-              <div className="bg-red-50 text-red-600 p-2 rounded flex-shrink-0">
-                <span className="material-symbols-outlined">picture_as_pdf</span>
-              </div>
+              {c.type === 'tacit_knowledge' ? (
+                <div className="bg-blue-50 text-blue-600 p-2 rounded flex-shrink-0">
+                  <span className="material-symbols-outlined">forum</span>
+                </div>
+              ) : (
+                <div className="bg-red-50 text-red-600 p-2 rounded flex-shrink-0">
+                  <span className="material-symbols-outlined">picture_as_pdf</span>
+                </div>
+              )}
               <div className="flex-1 min-w-0">
                 <p className="text-label-md text-on-surface truncate">[{c.index}] {c.filename}</p>
-                <p className="text-label-sm text-outline mt-0.5">Page {c.page}</p>
+                {c.type !== 'tacit_knowledge' && (
+                  <p className="text-label-sm text-outline mt-0.5">Page {c.page}</p>
+                )}
               </div>
-              <span className="material-symbols-outlined text-outline text-sm group-hover:text-primary flex-shrink-0">open_in_new</span>
+              {c.type !== 'tacit_knowledge' && (
+                <span className="material-symbols-outlined text-outline text-sm group-hover:text-primary flex-shrink-0">open_in_new</span>
+              )}
             </a>
           ))}
 

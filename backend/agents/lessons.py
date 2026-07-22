@@ -127,4 +127,49 @@ Return ONLY valid JSON, no markdown fences or extra text."""
             "citations": alert_citations
         })
 
-    return {"alerts": formatted_alerts}
+    # 4. Compute Attrition Risk (ratio of formal docs to captured tacit notes per equipment)
+    attrition_records = await db.fetch("""
+        SELECT e.id as equipment_id, e.name as equipment_name,
+               COUNT(DISTINCT d.id) as doc_count,
+               COUNT(DISTINCT tkn.id) as tacit_note_count
+        FROM entities e
+        LEFT JOIN documents d ON d.status = 'approved' AND EXISTS (
+            SELECT 1 FROM entity_relationships er 
+            JOIN entities e2 ON (er.target_id = e.id AND er.source_id = e2.id) OR (er.source_id = e.id AND er.target_id = e2.id)
+            WHERE e2.source_document_id = d.id
+        ) OR e.source_document_id = d.id
+        LEFT JOIN tacit_knowledge_notes tkn ON tkn.equipment_entity_id = e.id
+        WHERE e.type = 'Equipment'
+        GROUP BY e.id, e.name
+    """)
+    
+    attrition_risk = []
+    for r in attrition_records:
+        doc_count = r['doc_count']
+        tacit_count = r['tacit_note_count']
+        
+        # Calculate risk score: High if lots of docs but few tacit notes
+        # Avoid division by zero
+        risk_score = 0
+        if doc_count > 0:
+            if tacit_count == 0:
+                risk_score = 100
+            else:
+                risk_score = min(100, int((doc_count / (tacit_count + 1)) * 10))
+                
+        risk_level = "High" if risk_score > 70 else "Medium" if risk_score > 30 else "Low"
+        
+        if doc_count > 0: # Only care about equipment that has at least some formal documentation
+            attrition_risk.append({
+                "equipment_id": str(r['equipment_id']),
+                "equipment_name": r['equipment_name'],
+                "doc_count": doc_count,
+                "tacit_note_count": tacit_count,
+                "risk_score": risk_score,
+                "risk_level": risk_level
+            })
+            
+    # Sort by risk score descending
+    attrition_risk.sort(key=lambda x: x['risk_score'], reverse=True)
+
+    return {"alerts": formatted_alerts, "attrition_risk": attrition_risk}

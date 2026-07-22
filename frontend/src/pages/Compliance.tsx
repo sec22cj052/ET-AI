@@ -70,7 +70,7 @@ export default function Compliance() {
     }
 
     try {
-      const res = await fetch('http://localhost:8000/agents/compliance/check', {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000'}/agents/compliance/check`, {
         method: 'POST',
         body: formData,
       });

@@ -82,7 +82,7 @@ export default function RCA() {
   const fetchHighRisk = async () => {
     setLoading(true);
     try {
-      const res = await fetch('http://localhost:8000/agents/rca/high-risk');
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000'}/agents/rca/high-risk`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       setEquipmentList(data.equipment || []);
@@ -110,7 +110,7 @@ export default function RCA() {
     setCitations([]);
 
     try {
-      const res = await fetch(`http://localhost:8000/agents/rca/${encodeURIComponent(equipmentName)}`);
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000'}/agents/rca/${encodeURIComponent(equipmentName)}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       setReport(data.report);

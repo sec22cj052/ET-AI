@@ -328,6 +328,45 @@ Returns the full graph for the seeded Centrifugal Pump dataset (no `entity_id`).
 
 ---
 
+## 8. Tacit Knowledge API
+
+### `POST /tacit-knowledge/capture`
+Captures a short text/voice insight and generates an embedding.
+
+**Request:**
+```json
+{
+  "equipment_id": "uuid-string",
+  "contributor_name": "Jane Doe",
+  "contributor_role": "Operator",
+  "content_text": "The bearing runs hot at 3000 RPM...",
+  "capture_context": "quick_capture",
+  "capture_method": "text"
+}
+```
+**Response:**
+```json
+{
+  "message": "Captured",
+  "note_id": "uuid-string"
+}
+```
+
+### `PUT /tacit-knowledge/{note_id}/verify`
+Promotes the trust tier of a tacit note.
+
+**Request:**
+```json
+{
+  "trust_tier": "sme_verified"
+}
+```
+
+### `POST /tacit-knowledge/exit-interview-submit`
+Bulk-submits multi-question exit interview data.
+
+---
+
 ## HTTP Status Codes Used
 | Code | Meaning |
 |---|---|

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import ForceGraph2D from 'react-force-graph-2d';
 import { useNavigate } from 'react-router-dom';
+import TacitCaptureWidget from '../components/TacitCaptureWidget';
 
 interface GraphNode {
   id: string;
@@ -77,8 +78,8 @@ export default function KnowledgeGraph() {
     setError(null);
     try {
       const url = entityId
-        ? `http://localhost:8000/graph/explore/${entityId}`
-        : 'http://localhost:8000/graph/explore';
+        ? `${import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000'}/graph/explore/${entityId}`
+        : `${import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000'}/graph/explore`;
       const res = await fetch(url);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
@@ -390,6 +391,11 @@ export default function KnowledgeGraph() {
                 <span className="material-symbols-outlined text-[18px]">smart_toy</span>
                 Ask Copilot about "{selected.label}"
               </button>
+
+              {/* Tacit Knowledge Capture Widget */}
+              {selected.type === 'Equipment' && (
+                <TacitCaptureWidget equipmentId={selected.id} onSuccess={() => console.log('Tacit note captured')} />
+              )}
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center h-full text-center gap-3 py-8">

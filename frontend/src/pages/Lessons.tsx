@@ -16,8 +16,18 @@ interface Alert {
   citations: Citation[];
 }
 
+interface AttritionRisk {
+  equipment_id: string;
+  equipment_name: string;
+  doc_count: number;
+  tacit_note_count: number;
+  risk_score: number;
+  risk_level: 'High' | 'Medium' | 'Low';
+}
+
 export default function Lessons() {
   const [alerts, setAlerts] = useState<Alert[]>([]);
+  const [attritionRisk, setAttritionRisk] = useState<AttritionRisk[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -29,10 +39,11 @@ export default function Lessons() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch('http://localhost:8000/agents/lessons/feed');
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000'}/agents/lessons/feed`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       setAlerts(data.alerts || []);
+      setAttritionRisk(data.attrition_risk || []);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to fetch lessons learned feed');
     } finally {
@@ -77,16 +88,50 @@ export default function Lessons() {
               <span className="material-symbols-outlined text-red-500 text-5xl">error</span>
               <p className="text-body-md text-red-700">{error}</p>
             </div>
-          ) : alerts.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 gap-4 bg-white border border-outline-variant rounded-xl shadow-sm">
-              <span className="material-symbols-outlined text-primary text-5xl">check_circle</span>
-              <h2 className="text-headline-md font-headline-md text-on-surface">No Patterns Detected</h2>
-              <p className="text-body-md text-on-surface-variant text-center max-w-md">
-                The AI scanned all approved work orders and incident records but did not find any recurring failure patterns matching the threshold.
-              </p>
-            </div>
           ) : (
-            alerts.map((alert, index) => (
+            <>
+              {/* Attrition Risk Section */}
+              {attritionRisk.length > 0 && (
+                <div className="bg-white border border-outline-variant rounded-xl shadow-sm p-6 mb-8">
+                  <h2 className="text-headline-sm font-headline-sm text-on-surface mb-2 flex items-center gap-2">
+                    <span className="material-symbols-outlined text-red-500">warning</span>
+                    Knowledge Attrition Risk
+                  </h2>
+                  <p className="text-body-md text-on-surface-variant mb-4">
+                    Equipment highly documented formally, but lacking captured tacit field insights. High risk if SMEs retire.
+                  </p>
+                  <div className="space-y-3">
+                    {attritionRisk.map((risk, i) => (
+                      <div key={i} className="flex justify-between items-center p-3 bg-surface-container-low rounded-lg">
+                        <div>
+                          <p className="font-semibold text-on-surface">{risk.equipment_name}</p>
+                          <p className="text-sm text-on-surface-variant">Docs: {risk.doc_count} | Tacit Notes: {risk.tacit_note_count}</p>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <span className={`px-2 py-1 rounded text-xs font-bold ${
+                            risk.risk_level === 'High' ? 'bg-red-100 text-red-700' :
+                            risk.risk_level === 'Medium' ? 'bg-orange-100 text-orange-700' :
+                            'bg-green-100 text-green-700'
+                          }`}>
+                            {risk.risk_level} Risk ({risk.risk_score})
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {alerts.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-20 gap-4 bg-white border border-outline-variant rounded-xl shadow-sm">
+                  <span className="material-symbols-outlined text-primary text-5xl">check_circle</span>
+                  <h2 className="text-headline-md font-headline-md text-on-surface">No Patterns Detected</h2>
+                  <p className="text-body-md text-on-surface-variant text-center max-w-md">
+                    The AI scanned all approved work orders and incident records but did not find any recurring failure patterns matching the threshold.
+                  </p>
+                </div>
+              ) : (
+                alerts.map((alert, index) => (
               <div key={index} className="bg-white border border-outline-variant rounded-xl shadow-sm overflow-hidden flex flex-col md:flex-row relative">
                 {/* Visual indicator bar */}
                 <div className="w-full md:w-1.5 bg-orange-400 flex-shrink-0"></div>
@@ -163,6 +208,8 @@ export default function Lessons() {
                 )}
               </div>
             ))
+          )}
+          </>
           )}
         </div>
       </div>

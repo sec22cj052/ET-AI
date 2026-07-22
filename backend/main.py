@@ -13,6 +13,7 @@ from routers.rca import router as rca_router
 from routers.compliance import router as compliance_router
 from routers.lessons import router as lessons_router
 from routers.auth import router as auth_router
+from routers.tacit import router as tacit_router
 from worker import document_worker
 
 load_dotenv()
@@ -58,6 +59,7 @@ app.include_router(copilot_router)
 app.include_router(rca_router)
 app.include_router(compliance_router)
 app.include_router(lessons_router)
+app.include_router(tacit_router)
 
 @app.get("/")
 async def root():

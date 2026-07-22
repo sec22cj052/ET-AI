@@ -33,7 +33,7 @@ export default function Ingestion() {
 
   const fetchDocuments = async () => {
     try {
-      const res = await fetch('http://localhost:8000/ingest/list');
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000'}/ingest/list`);
       if (res.ok) setDocuments(await res.json());
     } catch {
       // backend not reachable
@@ -64,7 +64,7 @@ export default function Ingestion() {
     formData.append('doc_type', docType);
 
     try {
-      const res = await fetch('http://localhost:8000/ingest/upload', {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000'}/ingest/upload`, {
         method: 'POST',
         body: formData,
       });

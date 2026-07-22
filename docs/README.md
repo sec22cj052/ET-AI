@@ -12,15 +12,17 @@ Built as a hackathon prototype targeting 40-50 concurrent users.
 5. **Lessons Learned & Failure Intelligence Engine** — pattern detection across incident/failure records, proactive alert feed
 6. **Knowledge Graph Explorer** — interactive visual graph view of the Centrifugal Pump ontology (React Flow), core deliverable
 7. **Human-in-the-Loop (HITL) Verification Dashboard** — every ingested document sits in `pending_review` until a human reviews and approves it; nothing reaches the RAG Copilot or any other agent unapproved
+8. **Tacit Knowledge Capture & Attrition Risk Engine** — captures undocumented field insights directly from experts and surfaces equipment at high risk of knowledge loss.
 
 Every agent response includes clickable citations linking directly to the source document page — see `docs/system_architecture_and_data_flow.md` Section 5 for how this works end-to-end.
 
 ## Implementation Status
 **Implemented:**
-- All 7 core features are fully implemented, functional, and integrated.
+- All 8 core features are fully implemented, functional, and integrated.
 - **Role-Based Access Control (RBAC):** JWT Auth via `python-jose` and `bcrypt` separates Admin (Ingestion/Verification) from Operator (Copilot/Agents).
 - **HITL Confidence Scoring & Redesign:** AI provides a 0-100% confidence score across 9 industry rules. The UI features a Document Intelligence Report with AI summaries, timelines, and key facts.
 - **Knowledge Graph Innovations:** Nodes size dynamically by degree, edges are labeled directly on the canvas, and a rich inspector sidebar provides source tracebacks and "Ask Copilot" deep links.
+- **Tacit Knowledge Capture:** Web Speech API integration, multi-step Exit Interview wizard, and Attrition Risk metrics on the Lessons Learned feed.
 - End-to-end ingestion pipeline with Cohere Vision parsing.
 - Expert Knowledge Copilot with GraphRAG and citations.
 - Maintenance Intelligence (RCA) and Compliance Gap Analysis agents.

@@ -10,6 +10,7 @@ import RCA from './pages/RCA';
 import Compliance from './pages/Compliance';
 import Lessons from './pages/Lessons';
 import Verification from './pages/Verification';
+import PlantManagerInbox from './pages/PlantManagerInbox';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 
 function ProtectedRoute({ children, requireAdmin = false }: { children: React.ReactNode, requireAdmin?: boolean }) {
@@ -61,6 +62,11 @@ function AppRoutes() {
         <Route path="verification" element={
           <ProtectedRoute requireAdmin>
             <Verification />
+          </ProtectedRoute>
+        } />
+        <Route path="plant-manager-inbox" element={
+          <ProtectedRoute requireAdmin>
+            <PlantManagerInbox />
           </ProtectedRoute>
         } />
 

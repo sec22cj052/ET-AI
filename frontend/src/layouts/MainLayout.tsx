@@ -31,6 +31,10 @@ export default function MainLayout() {
                 <span className="material-symbols-outlined" data-icon="rule">rule</span>
                 <span className="font-label-md text-label-md">HITL Verification</span>
               </Link>
+              <Link to="/plant-manager-inbox" className={`flex items-center gap-3 px-4 py-3 rounded-sm transition-all duration-200 ${path === '/plant-manager-inbox' ? 'bg-secondary-container text-on-secondary-container font-bold border-l-2 border-primary' : 'text-on-surface-variant hover:bg-surface-container-high'}`}>
+                <span className="material-symbols-outlined" data-icon="inbox">inbox</span>
+                <span className="font-label-md text-label-md">Compliance Inbox</span>
+              </Link>
             </>
           )}
           <Link to="/copilot" className={`flex items-center gap-3 px-4 py-3 rounded-sm transition-all duration-200 ${path === '/copilot' ? 'bg-secondary-container text-on-secondary-container font-bold border-l-2 border-primary' : 'text-on-surface-variant hover:bg-surface-container-high'}`}>

@@ -18,6 +18,12 @@ interface Entity {
   properties: Record<string, any>;
   source_page: number | null;
   is_locked?: boolean;
+  confidence_composite?: number;
+  confidence_breakdown?: any;
+  criticality?: string;
+  review_status?: string;
+  rule_violations?: any;
+  required_approval_level?: number;
 }
 
 interface Chunk {
@@ -129,7 +135,7 @@ export default function Verification() {
   const fetchDocuments = async () => {
     setLoadingList(true);
     try {
-      const res = await fetch('http://localhost:8000/ingest/list');
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000'}/ingest/list`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       setDocuments(await res.json());
     } catch (err: unknown) {
@@ -144,7 +150,7 @@ export default function Verification() {
     setFeedback('');
     setShowRawData(false);
     try {
-      const res = await fetch(`http://localhost:8000/ingest/${id}/review`);
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000'}/ingest/${id}/review`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       setDocDetails(data.document);
@@ -158,7 +164,7 @@ export default function Verification() {
 
   const handleSaveChunk = async (chunkId: string) => {
     try {
-      const res = await fetch(`http://localhost:8000/ingest/chunk/${chunkId}`, {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000'}/ingest/chunk/${chunkId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text: editChunkText })
@@ -173,7 +179,7 @@ export default function Verification() {
     if (!docDetails || !feedback.trim()) return;
     setImproving(true);
     try {
-      const res = await fetch(`http://localhost:8000/ingest/${docDetails.id}/improve`, {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000'}/ingest/${docDetails.id}/improve`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ feedback })
@@ -192,7 +198,7 @@ export default function Verification() {
     if (!docDetails) return;
     setApproving(true);
     try {
-      const res = await fetch(`http://localhost:8000/ingest/${docDetails.id}/approve`, { method: 'PUT' });
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000'}/ingest/${docDetails.id}/approve`, { method: 'PUT' });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       setDocDetails({ ...docDetails, status: 'approved' });
       setDocuments(documents.map(d => d.id === docDetails.id ? { ...d, status: 'approved' } : d));
@@ -202,11 +208,29 @@ export default function Verification() {
 
   // Build key facts from entities
   const keyFacts = entities.map(e => ({
+    id: e.id,
     field: e.type,
     value: e.name,
     source: e.source_page ? `Page ${e.source_page}` : 'N/A',
     props: e.properties,
+    confidence_composite: e.confidence_composite,
+    criticality: e.criticality,
+    review_status: e.review_status,
+    rule_violations: e.rule_violations
   }));
+
+  const handleReviewAction = async (entityId: string, action: string, reason_code: string) => {
+    try {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000'}/ingest/entity/${entityId}/review-action`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action, reason_code })
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      setEntities(entities.map(e => e.id === entityId ? { ...e, review_status: data.review_status, is_locked: true } : e));
+    } catch (err: unknown) { alert(err instanceof Error ? err.message : 'Failed'); }
+  };
 
   // Build mini-graph data from entities and relationships
   const miniGraphData = (() => {
@@ -446,9 +470,11 @@ export default function Verification() {
                         <thead>
                           <tr className="bg-surface-container-low text-label-sm text-on-surface-variant uppercase tracking-wider">
                             <th className="text-left p-3 border-t border-outline-variant">Type</th>
+                            <th className="text-left p-3 border-t border-outline-variant">Confidence</th>
                             <th className="text-left p-3 border-t border-outline-variant">Value</th>
                             <th className="text-left p-3 border-t border-outline-variant">Source</th>
                             <th className="text-left p-3 border-t border-outline-variant">Details</th>
+                            <th className="text-left p-3 border-t border-outline-variant">Action</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-outline-variant">
@@ -458,16 +484,44 @@ export default function Verification() {
                                 <span className="bg-primary/10 text-primary px-2 py-0.5 rounded text-label-sm font-bold border border-primary/20">
                                   {fact.field}
                                 </span>
+                                {fact.criticality === 'critical' && (
+                                    <span className="ml-2 text-red-600 material-symbols-outlined text-[14px]" title="Critical Field">warning</span>
+                                )}
+                              </td>
+                              <td className="p-3">
+                                <div className="w-16 h-2 bg-surface-container rounded-full overflow-hidden">
+                                    <div className={`h-full ${fact.confidence_composite! >= 0.8 ? 'bg-lime-500' : fact.confidence_composite! >= 0.5 ? 'bg-orange-500' : 'bg-red-500'}`} style={{width: `${(fact.confidence_composite || 0) * 100}%`}}></div>
+                                </div>
+                                <span className="text-[10px] text-on-surface-variant">{(fact.confidence_composite || 0).toFixed(2)}</span>
                               </td>
                               <td className="p-3 text-body-md font-semibold text-on-surface">{fact.value}</td>
                               <td className="p-3 text-body-sm text-on-surface-variant">{fact.source}</td>
                               <td className="p-3 text-body-sm text-on-surface-variant font-mono">
                                 {fact.props && Object.keys(fact.props).length > 0
                                   ? Object.entries(fact.props).map(([k, v]) => (
-                                      <span key={k} className="mr-2">{k}: {typeof v === 'object' ? JSON.stringify(v) : String(v)}</span>
+                                      <span key={k} className="mr-2 block">{k}: {typeof v === 'object' ? JSON.stringify(v) : String(v)}</span>
                                     ))
                                   : '—'
                                 }
+                                {fact.rule_violations && fact.rule_violations.length > 0 && (
+                                    <div className="mt-2 text-red-600 text-[11px] font-bold">
+                                      Violations: {fact.rule_violations.join(', ')}
+                                    </div>
+                                )}
+                              </td>
+                              <td className="p-3">
+                                {fact.review_status === 'sme_approved' ? (
+                                    <span className="text-lime-600 font-bold flex items-center gap-1"><span className="material-symbols-outlined text-[16px]">check_circle</span> Approved</span>
+                                ) : fact.review_status === 'needs_review' ? (
+                                    <div className="flex gap-2">
+                                        <button onClick={() => handleReviewAction(fact.id, 'approve', 'looks_good')} className="px-2 py-1 bg-lime-100 text-lime-800 hover:bg-lime-200 rounded text-xs font-bold transition-colors">Approve</button>
+                                        <button onClick={() => handleReviewAction(fact.id, 'escalate', 'not_sure')} className="px-2 py-1 bg-red-100 text-red-800 hover:bg-red-200 rounded text-xs font-bold transition-colors">Escalate</button>
+                                    </div>
+                                ) : fact.review_status === 'escalated' ? (
+                                    <span className="text-orange-600 font-bold flex items-center gap-1"><span className="material-symbols-outlined text-[16px]">flag</span> Escalated</span>
+                                ) : (
+                                    <span className="text-gray-600 font-bold capitalize">{fact.review_status?.replace('_', ' ')}</span>
+                                )}
                               </td>
                             </tr>
                           ))}
