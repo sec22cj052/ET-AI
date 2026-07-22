@@ -13,3 +13,4 @@ pandas
 openpyxl
 email-validator
 supabase
+langchain-cohere
