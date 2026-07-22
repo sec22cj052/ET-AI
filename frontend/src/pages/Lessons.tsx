@@ -39,7 +39,7 @@ export default function Lessons() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000'}/agents/lessons/feed`);
+      const res = await fetch('/agents/lessons/feed');
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       setAlerts(data.alerts || []);

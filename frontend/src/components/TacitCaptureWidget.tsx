@@ -62,7 +62,7 @@ export default function TacitCaptureWidget({ equipmentId, onSuccess }: TacitCapt
     
     setIsSubmitting(true);
     try {
-      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000'}/tacit-knowledge/capture`, {
+      const res = await fetch('/tacit-knowledge/capture', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

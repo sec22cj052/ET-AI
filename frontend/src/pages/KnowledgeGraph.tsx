@@ -78,8 +78,8 @@ export default function KnowledgeGraph() {
     setError(null);
     try {
       const url = entityId
-        ? `${import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000'}/graph/explore/${entityId}`
-        : `${import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000'}/graph/explore`;
+        ? '/graph/explore/${entityId}'
+        : '/graph/explore';
       const res = await fetch(url);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();

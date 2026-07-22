@@ -22,7 +22,7 @@ export default function PlantManagerInbox() {
   const fetchInbox = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000'}/ingest/plant-manager/inbox`);
+      const res = await fetch('/ingest/plant-manager/inbox');
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       setData(await res.json());
     } catch (err: unknown) {
@@ -38,7 +38,7 @@ export default function PlantManagerInbox() {
   
   const handleDecision = async (entityId: string, decision: 'confirm' | 'send_back') => {
     try {
-      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000'}/ingest/plant-manager/inbox/${entityId}/decide`, {
+      const res = await fetch('/ingest/plant-manager/inbox/${entityId}/decide', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ decision })

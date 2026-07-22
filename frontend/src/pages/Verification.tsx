@@ -135,7 +135,7 @@ export default function Verification() {
   const fetchDocuments = async () => {
     setLoadingList(true);
     try {
-      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000'}/ingest/list`);
+      const res = await fetch('/ingest/list');
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       setDocuments(await res.json());
     } catch (err: unknown) {
@@ -150,7 +150,7 @@ export default function Verification() {
     setFeedback('');
     setShowRawData(false);
     try {
-      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000'}/ingest/${id}/review`);
+      const res = await fetch('/ingest/${id}/review');
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       setDocDetails(data.document);
@@ -164,7 +164,7 @@ export default function Verification() {
 
   const handleSaveChunk = async (chunkId: string) => {
     try {
-      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000'}/ingest/chunk/${chunkId}`, {
+      const res = await fetch('/ingest/chunk/${chunkId}', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text: editChunkText })
@@ -179,7 +179,7 @@ export default function Verification() {
     if (!docDetails || !feedback.trim()) return;
     setImproving(true);
     try {
-      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000'}/ingest/${docDetails.id}/improve`, {
+      const res = await fetch('/ingest/${docDetails.id}/improve', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ feedback })
@@ -198,7 +198,7 @@ export default function Verification() {
     if (!docDetails) return;
     setApproving(true);
     try {
-      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000'}/ingest/${docDetails.id}/approve`, { method: 'PUT' });
+      const res = await fetch('/ingest/${docDetails.id}/approve', { method: 'PUT' });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       setDocDetails({ ...docDetails, status: 'approved' });
       setDocuments(documents.map(d => d.id === docDetails.id ? { ...d, status: 'approved' } : d));
@@ -221,7 +221,7 @@ export default function Verification() {
 
   const handleReviewAction = async (entityId: string, action: string, reason_code: string) => {
     try {
-      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000'}/ingest/entity/${entityId}/review-action`, {
+      const res = await fetch('/ingest/entity/${entityId}/review-action', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action, reason_code })

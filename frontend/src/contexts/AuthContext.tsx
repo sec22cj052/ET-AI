@@ -30,7 +30,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const storedToken = localStorage.getItem('access_token');
       if (storedToken) {
         try {
-          const res = await fetch(`${import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000'}/auth/me`, {
+          const res = await fetch('/auth/me', {
             headers: { Authorization: `Bearer ${storedToken}` }
           });
           if (res.ok) {
@@ -55,7 +55,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setToken(newToken);
     
     // Fetch user details
-    const res = await fetch(`${import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000'}/auth/me`, {
+    const res = await fetch('/auth/me', {
       headers: { Authorization: `Bearer ${newToken}` }
     });
     if (res.ok) {

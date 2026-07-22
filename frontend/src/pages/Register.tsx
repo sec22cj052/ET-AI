@@ -19,7 +19,7 @@ export default function Register() {
 
     try {
       // 1. Register
-      const regRes = await fetch(`${import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000'}/auth/register`, {
+      const regRes = await fetch('/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -37,7 +37,7 @@ export default function Register() {
       }
 
       // 2. Login immediately after
-      const loginRes = await fetch(`${import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000'}/auth/login`, {
+      const loginRes = await fetch('/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),

@@ -19,7 +19,7 @@ export default function ExitInterviewWizard({ equipmentId, equipmentType, onClos
   useEffect(() => {
     const fetchPrompts = async () => {
       try {
-        const res = await fetch(`${import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000'}/tacit-knowledge/exit-interview-template/${equipmentType}`, {
+        const res = await fetch('/tacit-knowledge/exit-interview-template/${equipmentType}', {
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('access_token')}`
           }
@@ -55,7 +55,7 @@ export default function ExitInterviewWizard({ equipmentId, equipmentType, onClos
     }));
 
     try {
-      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000'}/tacit-knowledge/exit-interview-submit`, {
+      const res = await fetch('/tacit-knowledge/exit-interview-submit', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
