@@ -182,7 +182,7 @@ export default function Ingestion() {
           const isPendingReview = doc.status === 'pending_review';
           const isQueued = doc.current_step === 'queued' && isProcessing;
           
-          const stepLabel = doc.step_detail ? STEP_LABELS[doc.current_step || ''] || 'Processing...' : STEP_LABELS[doc.current_step || ''] || 'Processing...';
+          // const stepLabel = doc.step_detail ? STEP_LABELS[doc.current_step || ''] || 'Processing...' : STEP_LABELS[doc.current_step || ''] || 'Processing...';
 
           return (
             <div key={doc.id} className={`p-4 hub-card transition-all ${isQueued ? 'opacity-70' : ''}`}>
