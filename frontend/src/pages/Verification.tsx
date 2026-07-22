@@ -150,7 +150,7 @@ export default function Verification() {
     setFeedback('');
     setShowRawData(false);
     try {
-      const res = await fetch('/ingest/${id}/review');
+      const res = await fetch(`/ingest/${id}/review`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       setDocDetails(data.document);
