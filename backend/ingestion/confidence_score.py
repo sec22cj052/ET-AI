@@ -50,12 +50,12 @@ async def check_cross_doc_consistency(conn, entity: Dict[str, Any], rule_violati
         return 1.0
         
     # Look up existing approved entities with same name
-    rows = await conn.fetch(\"\"\"
+    rows = await conn.fetch("""
         SELECT e.type, e.properties 
         FROM entities e
         JOIN documents d ON e.source_document_id = d.id
         WHERE e.name = $1 AND d.status = 'approved'
-    \"\"\", name)
+    """, name)
     
     if not rows:
         return 1.0 # First time seeing this entity
