@@ -6,6 +6,7 @@ interface Citation {
   filename: string;
   page: number;
   storage_url: string;
+  type?: string;
 }
 
 interface Message {

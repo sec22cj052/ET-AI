@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { FileText, Send, ChevronRight, ChevronLeft, CheckCircle } from 'lucide-react';
 
