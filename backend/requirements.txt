@@ -16,4 +16,4 @@ supabase
 langchain-cohere
 python-jose[cryptography]
 passlib[bcrypt]
-bcrypt
+bcrypt==3.2.2
