@@ -63,7 +63,6 @@ const TYPE_COLORS: Record<string, string> = {
   Default: '#737686',
 };
 
-// Radial gauge component
 function ConfidenceGauge({ score }: { score: number }) {
   const radius = 40;
   const circumference = 2 * Math.PI * radius;
@@ -108,10 +107,18 @@ export default function Verification() {
   const [activeRawTab, setActiveRawTab] = useState<'chunks' | 'entities'>('chunks');
   const [editingChunkId, setEditingChunkId] = useState<string | null>(null);
   const [editChunkText, setEditChunkText] = useState('');
-  const [showRules, setShowRules] = useState(false);
+  const [showRules, setShowRules] = useState(true);
 
-  const [feedback, setFeedback] = useState('');
-  const [improving, setImproving] = useState(false);
+  // Agentic Feedback Loop State
+  const [improvingEntityId, setImprovingEntityId] = useState<string | null>(null);
+  const [entityFeedback, setEntityFeedback] = useState('');
+  const [isImprovingEntity, setIsImprovingEntity] = useState(false);
+  const [proposedEntityUpdate, setProposedEntityUpdate] = useState<{id: string, properties: any} | null>(null);
+
+  // Global Feedback Loop State
+  const [globalFeedback, setGlobalFeedback] = useState('');
+  const [isProcessingGlobal, setIsProcessingGlobal] = useState(false);
+
   const [approving, setApproving] = useState(false);
 
   const miniGraphRef = useRef<HTMLDivElement>(null);
@@ -147,8 +154,13 @@ export default function Verification() {
     setLoadingDetails(true);
     setError(null);
     setEditingChunkId(null);
-    setFeedback('');
     setShowRawData(false);
+    
+    // Reset agentic loop state
+    setImprovingEntityId(null);
+    setEntityFeedback('');
+    setProposedEntityUpdate(null);
+    
     try {
       const res = await fetch(`/ingest/${id}/review`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -164,7 +176,7 @@ export default function Verification() {
 
   const handleSaveChunk = async (chunkId: string) => {
     try {
-      const res = await fetch('/ingest/chunk/${chunkId}', {
+      const res = await fetch(`/ingest/chunk/${chunkId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text: editChunkText })
@@ -175,30 +187,80 @@ export default function Verification() {
     } catch (err: unknown) { alert(err instanceof Error ? err.message : 'Failed'); }
   };
 
-  const handleImprove = async () => {
-    if (!docDetails || !feedback.trim()) return;
-    setImproving(true);
+  // Agentic Loop: Request Proposal
+  const handleRequestEntityImprovement = async (entityId: string) => {
+    if (!entityFeedback.trim()) return;
+    setIsImprovingEntity(true);
     try {
-      const res = await fetch('/ingest/${docDetails.id}/improve', {
+      const res = await fetch(`/ingest/entity/${entityId}/improve_proposal`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ feedback })
+        body: JSON.stringify({ feedback: entityFeedback })
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      setFeedback('');
-      setSelectedDocId(null);
-      setDocDetails(null);
-      await fetchDocuments();
-      alert("Document sent back to AI for re-processing. Locked edits were preserved.");
-    } catch (err: unknown) { alert(err instanceof Error ? err.message : 'Failed'); }
-    finally { setImproving(false); }
+      const data = await res.json();
+      setProposedEntityUpdate({ id: entityId, properties: data.proposed_properties });
+    } catch (err: unknown) { 
+      alert(err instanceof Error ? err.message : 'Failed to generate proposal'); 
+    } finally { 
+      setIsImprovingEntity(false); 
+    }
+  };
+
+  // Agentic Loop: Accept Proposal
+  const handleAcceptEntityUpdate = async () => {
+    if (!proposedEntityUpdate) return;
+    try {
+      const res = await fetch(`/ingest/entity/${proposedEntityUpdate.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ properties: proposedEntityUpdate.properties })
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      
+      // Update local state
+      setEntities(entities.map(e => 
+        e.id === proposedEntityUpdate.id 
+          ? { ...e, properties: proposedEntityUpdate.properties, is_locked: true, review_status: 'approved' } 
+          : e
+      ));
+      
+      // Close loops
+      setProposedEntityUpdate(null);
+      setImprovingEntityId(null);
+      setEntityFeedback('');
+      
+    } catch (err: unknown) { 
+      alert(err instanceof Error ? err.message : 'Failed to apply update'); 
+    }
+  };
+
+  const handleGlobalImprovement = async () => {
+    if (!docDetails || !globalFeedback.trim()) return;
+    setIsProcessingGlobal(true);
+    try {
+      const res = await fetch(`/ingest/${docDetails.id}/improve_global`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ feedback: globalFeedback })
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      
+      setGlobalFeedback('');
+      // Reload document details to fetch updated entities
+      await fetchDocumentDetails(docDetails.id);
+    } catch (err: unknown) { 
+      alert(err instanceof Error ? err.message : 'Failed to process global improvement'); 
+    } finally { 
+      setIsProcessingGlobal(false); 
+    }
   };
 
   const handleApprove = async () => {
     if (!docDetails) return;
     setApproving(true);
     try {
-      const res = await fetch('/ingest/${docDetails.id}/approve', { method: 'PUT' });
+      const res = await fetch(`/ingest/${docDetails.id}/approve`, { method: 'PUT' });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       setDocDetails({ ...docDetails, status: 'approved' });
       setDocuments(documents.map(d => d.id === docDetails.id ? { ...d, status: 'approved' } : d));
@@ -206,22 +268,9 @@ export default function Verification() {
     finally { setApproving(false); }
   };
 
-  // Build key facts from entities
-  const keyFacts = entities.map(e => ({
-    id: e.id,
-    field: e.type,
-    value: e.name,
-    source: e.source_page ? `Page ${e.source_page}` : 'N/A',
-    props: e.properties,
-    confidence_composite: e.confidence_composite,
-    criticality: e.criticality,
-    review_status: e.review_status,
-    rule_violations: e.rule_violations
-  }));
-
   const handleReviewAction = async (entityId: string, action: string, reason_code: string) => {
     try {
-      const res = await fetch('/ingest/entity/${entityId}/review-action', {
+      const res = await fetch(`/ingest/entity/${entityId}/review-action`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action, reason_code })
@@ -232,11 +281,8 @@ export default function Verification() {
     } catch (err: unknown) { alert(err instanceof Error ? err.message : 'Failed'); }
   };
 
-  // Build mini-graph data from entities and relationships
   const miniGraphData = (() => {
     const nodes = entities.map(e => ({ id: e.id, label: e.name, type: e.type }));
-    // We don't have relationships in the review response, so we infer from entities
-    // Equipment <-> WorkOrder implicit links
     const links: { source: string; target: string; label: string }[] = [];
     const equipments = entities.filter(e => e.type === 'Equipment');
     const workOrders = entities.filter(e => e.type === 'WorkOrder');
@@ -248,7 +294,6 @@ export default function Verification() {
     return { nodes, links };
   })();
 
-  // Extract dates for timeline
   const timelineDates = entities.flatMap(e => {
     const dates = e.properties?.dates || [];
     return dates.filter((d: string) => d).map((d: string) => ({ date: d, entity: e.name, type: e.type }));
@@ -355,7 +400,7 @@ export default function Verification() {
                 <div>
                   <h1 className="text-headline-sm font-headline-sm text-on-surface flex items-center gap-2">
                     {docDetails.filename}
-                    <a href={docDetails.storage_url} target="_blank" rel="noopener noreferrer" className="text-primary hover:bg-primary-container p-1 rounded-full transition-colors flex items-center" title="Open Original">
+                    <a href={docDetails.storage_url} target="_blank" rel="noopener noreferrer" className="text-primary hover:bg-primary-container p-1 rounded-full transition-colors flex items-center" title="Open Original Document">
                       <span className="material-symbols-outlined text-[18px]">open_in_new</span>
                     </a>
                   </h1>
@@ -387,307 +432,295 @@ export default function Verification() {
             </div>
 
             {/* Main Content: Intelligence Report */}
-            <div className="flex-1 flex overflow-hidden">
-              {/* Source Document Viewer */}
-              <div className="w-5/12 border-r border-outline-variant bg-surface-container-lowest flex flex-col relative hidden lg:flex">
-                <div className="bg-surface-container-low border-b border-outline-variant p-2 flex items-center gap-2 shadow-sm z-10">
-                  <span className="material-symbols-outlined text-[16px]">picture_as_pdf</span>
-                  <span className="text-label-sm font-bold text-on-surface">Source Document</span>
-                </div>
-                {docDetails.storage_url && docDetails.storage_url !== '#' ? (
-                  <iframe
-                    id="source-viewer"
-                    src={`${docDetails.storage_url}#view=FitH`}
-                    className="w-full h-full border-none"
-                    title="Source Document"
-                  />
-                ) : (
-                  <div className="flex-1 flex flex-col items-center justify-center text-on-surface-variant p-6 text-center">
-                    <span className="material-symbols-outlined text-4xl mb-2 opacity-50">link_off</span>
-                    <p className="text-body-md font-semibold">Source Preview</p>
-                    <p className="text-body-sm mt-1">In production, the actual PDF renders here with page-sync.</p>
+            <div className="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-6">
+
+              {/* AI Summary Card */}
+              {docDetails.summary && (
+                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-5">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="material-symbols-outlined text-blue-600">auto_awesome</span>
+                    <h3 className="text-title-md font-bold text-blue-900">AI Document Summary</h3>
                   </div>
-                )}
-              </div>
+                  <p className="text-body-md text-blue-900 leading-relaxed">{docDetails.summary}</p>
+                </div>
+              )}
 
-              {/* Intelligence Report Panel */}
-              <div className="flex-1 flex flex-col overflow-hidden">
-                <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
-
-                  {/* AI Summary Card */}
-                  {docDetails.summary && (
-                    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-5">
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="material-symbols-outlined text-blue-600">auto_awesome</span>
-                        <h3 className="text-title-md font-bold text-blue-900">AI Document Summary</h3>
-                      </div>
-                      <p className="text-body-md text-blue-900 leading-relaxed">{docDetails.summary}</p>
+              {/* Confidence Rules Breakdown */}
+              {confidence && (
+                <div className="hub-card overflow-hidden">
+                  <button
+                    onClick={() => setShowRules(!showRules)}
+                    className="w-full flex items-center justify-between p-4 bg-surface-container-lowest hover:bg-surface-container-low transition-colors"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="material-symbols-outlined text-primary">checklist</span>
+                      <span className="text-title-md font-bold text-on-surface">Quality Rules ({confidence.rules.filter(r => r.passed).length}/{confidence.rules.length} passed)</span>
                     </div>
-                  )}
-
-                  {/* Confidence Rules Breakdown */}
-                  {confidence && (
-                    <div className="border border-outline-variant rounded-xl overflow-hidden">
-                      <button
-                        onClick={() => setShowRules(!showRules)}
-                        className="w-full flex items-center justify-between p-4 bg-surface-container-lowest hover:bg-surface-container-low transition-colors"
-                      >
-                        <div className="flex items-center gap-2">
-                          <span className="material-symbols-outlined text-primary">checklist</span>
-                          <span className="text-title-md font-bold text-on-surface">Quality Rules ({confidence.rules.filter(r => r.passed).length}/{confidence.rules.length} passed)</span>
-                        </div>
-                        <span className="material-symbols-outlined text-on-surface-variant">{showRules ? 'expand_less' : 'expand_more'}</span>
-                      </button>
-                      {showRules && (
-                        <div className="border-t border-outline-variant divide-y divide-outline-variant">
-                          {confidence.rules.map(rule => (
-                            <div key={rule.id} className="flex items-start gap-3 p-3 px-4">
-                              <span className={`material-symbols-outlined text-[20px] mt-0.5 ${rule.passed ? 'text-lime-600' : 'text-red-500'}`}>
-                                {rule.passed ? 'check_circle' : 'cancel'}
-                              </span>
-                              <div className="flex-1">
-                                <div className="flex items-center gap-2">
-                                  <span className="text-body-md font-semibold text-on-surface">{rule.name}</span>
-                                  <span className="text-label-sm text-on-surface-variant bg-surface-container px-1.5 py-0.5 rounded">{rule.weight}%</span>
-                                </div>
-                                <p className="text-body-sm text-on-surface-variant mt-0.5">{rule.detail}</p>
-                              </div>
+                    <span className="material-symbols-outlined text-on-surface-variant">{showRules ? 'expand_less' : 'expand_more'}</span>
+                  </button>
+                  {showRules && (
+                    <div className="border-t border-outline-variant divide-y divide-outline-variant">
+                      {confidence.rules.map(rule => (
+                        <div key={rule.id} className="flex items-start gap-3 p-3 px-4">
+                          <span className={`material-symbols-outlined text-[20px] mt-0.5 ${rule.passed ? 'text-lime-600' : 'text-red-500'}`}>
+                            {rule.passed ? 'check_circle' : 'cancel'}
+                          </span>
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <span className="text-body-md font-semibold text-on-surface">{rule.name}</span>
+                              <span className="text-label-sm text-on-surface-variant bg-surface-container px-1.5 py-0.5 rounded">{rule.weight}%</span>
                             </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Key Facts Table */}
-                  {keyFacts.length > 0 && (
-                    <div className="border border-outline-variant rounded-xl overflow-hidden">
-                      <div className="p-4 bg-surface-container-lowest flex items-center gap-2">
-                        <span className="material-symbols-outlined text-primary">table_chart</span>
-                        <h3 className="text-title-md font-bold text-on-surface">Key Facts Extracted</h3>
-                      </div>
-                      <table className="w-full">
-                        <thead>
-                          <tr className="bg-surface-container-low text-label-sm text-on-surface-variant uppercase tracking-wider">
-                            <th className="text-left p-3 border-t border-outline-variant">Type</th>
-                            <th className="text-left p-3 border-t border-outline-variant">Confidence</th>
-                            <th className="text-left p-3 border-t border-outline-variant">Value</th>
-                            <th className="text-left p-3 border-t border-outline-variant">Source</th>
-                            <th className="text-left p-3 border-t border-outline-variant">Details</th>
-                            <th className="text-left p-3 border-t border-outline-variant">Action</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-outline-variant">
-                          {keyFacts.map((fact, i) => (
-                            <tr key={i} className="hover:bg-surface-container-low transition-colors">
-                              <td className="p-3">
-                                <span className="bg-primary/10 text-primary px-2 py-0.5 rounded text-label-sm font-bold border border-primary/20">
-                                  {fact.field}
-                                </span>
-                                {fact.criticality === 'critical' && (
-                                    <span className="ml-2 text-red-600 material-symbols-outlined text-[14px]" title="Critical Field">warning</span>
-                                )}
-                              </td>
-                              <td className="p-3">
-                                <div className="w-16 h-2 bg-surface-container rounded-full overflow-hidden">
-                                    <div className={`h-full ${fact.confidence_composite! >= 0.8 ? 'bg-lime-500' : fact.confidence_composite! >= 0.5 ? 'bg-orange-500' : 'bg-red-500'}`} style={{width: `${(fact.confidence_composite || 0) * 100}%`}}></div>
-                                </div>
-                                <span className="text-[10px] text-on-surface-variant">{(fact.confidence_composite || 0).toFixed(2)}</span>
-                              </td>
-                              <td className="p-3 text-body-md font-semibold text-on-surface">{fact.value}</td>
-                              <td className="p-3 text-body-sm text-on-surface-variant">{fact.source}</td>
-                              <td className="p-3 text-body-sm text-on-surface-variant font-mono">
-                                {fact.props && Object.keys(fact.props).length > 0
-                                  ? Object.entries(fact.props).map(([k, v]) => (
-                                      <span key={k} className="mr-2 block">{k}: {typeof v === 'object' ? JSON.stringify(v) : String(v)}</span>
-                                    ))
-                                  : '—'
-                                }
-                                {fact.rule_violations && fact.rule_violations.length > 0 && (
-                                    <div className="mt-2 text-red-600 text-[11px] font-bold">
-                                      Violations: {fact.rule_violations.join(', ')}
-                                    </div>
-                                )}
-                              </td>
-                              <td className="p-3">
-                                {fact.review_status === 'sme_approved' ? (
-                                    <span className="text-lime-600 font-bold flex items-center gap-1"><span className="material-symbols-outlined text-[16px]">check_circle</span> Approved</span>
-                                ) : fact.review_status === 'needs_review' ? (
-                                    <div className="flex gap-2">
-                                        <button onClick={() => handleReviewAction(fact.id, 'approve', 'looks_good')} className="px-2 py-1 bg-lime-100 text-lime-800 hover:bg-lime-200 rounded text-xs font-bold transition-colors">Approve</button>
-                                        <button onClick={() => handleReviewAction(fact.id, 'escalate', 'not_sure')} className="px-2 py-1 bg-red-100 text-red-800 hover:bg-red-200 rounded text-xs font-bold transition-colors">Escalate</button>
-                                    </div>
-                                ) : fact.review_status === 'escalated' ? (
-                                    <span className="text-orange-600 font-bold flex items-center gap-1"><span className="material-symbols-outlined text-[16px]">flag</span> Escalated</span>
-                                ) : (
-                                    <span className="text-gray-600 font-bold capitalize">{fact.review_status?.replace('_', ' ')}</span>
-                                )}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-
-                  {/* Timeline */}
-                  {timelineDates.length > 0 && (
-                    <div className="border border-outline-variant rounded-xl p-4">
-                      <div className="flex items-center gap-2 mb-3">
-                        <span className="material-symbols-outlined text-primary">timeline</span>
-                        <h3 className="text-title-md font-bold text-on-surface">Event Timeline</h3>
-                      </div>
-                      <div className="flex items-center gap-2 overflow-x-auto pb-2">
-                        {timelineDates.map((item, i) => (
-                          <div key={i} className="flex items-center gap-2 flex-shrink-0">
-                            {i > 0 && <div className="w-8 h-px bg-outline-variant" />}
-                            <div className="flex flex-col items-center gap-1 px-3 py-2 bg-surface-container rounded-lg border border-outline-variant min-w-[120px]">
-                              <span className="text-label-sm font-bold text-primary">{item.date}</span>
-                              <span className="text-[11px] text-on-surface-variant">{item.entity}</span>
-                            </div>
+                            <p className="text-body-sm text-on-surface-variant mt-0.5">{rule.detail}</p>
                           </div>
-                        ))}
-                      </div>
+                        </div>
+                      ))}
                     </div>
                   )}
+                </div>
+              )}
 
-                  {/* Mini Relationship Graph */}
-                  {miniGraphData.nodes.length > 1 && (
-                    <div className="border border-outline-variant rounded-xl overflow-hidden">
-                      <div className="p-4 bg-surface-container-lowest flex items-center gap-2">
-                        <span className="material-symbols-outlined text-primary">hub</span>
-                        <h3 className="text-title-md font-bold text-on-surface">Entity Relationship Map</h3>
-                      </div>
-                      <div ref={miniGraphRef} className="bg-surface-dim/20" style={{ height: 250 }}>
-                        <ForceGraph2D
-                          graphData={miniGraphData}
-                          width={miniGraphDims.width}
-                          height={250}
-                          nodeCanvasObject={paintMiniNode}
-                          nodeCanvasObjectMode={() => 'replace'}
-                          linkLabel={(link: any) => link.label || ''}
-                          linkColor={() => '#c3c6d7'}
-                          linkWidth={1.5}
-                          linkDirectionalArrowLength={4}
-                          linkDirectionalArrowRelPos={1}
-                          backgroundColor="#f9f9ff"
-                          cooldownTicks={50}
-                        />
-                      </div>
-                    </div>
-                  )}
+              {/* Insight Cards (Replaces old Key Facts table) */}
+              {entities.length > 0 && (
+                <div>
+                  <div className="flex items-center gap-2 mb-4">
+                    <span className="material-symbols-outlined text-primary">psychology</span>
+                    <h3 className="text-title-md font-bold text-on-surface">Extracted Entities & Insights</h3>
+                  </div>
 
-                  {/* Collapsible Raw Data Drawer */}
-                  <div className="border border-outline-variant rounded-xl overflow-hidden">
-                    <button
-                      onClick={() => setShowRawData(!showRawData)}
-                      className="w-full flex items-center justify-between p-4 bg-surface-container-lowest hover:bg-surface-container-low transition-colors"
-                    >
-                      <div className="flex items-center gap-2">
-                        <span className="material-symbols-outlined text-on-surface-variant">data_object</span>
-                        <span className="text-title-md font-bold text-on-surface">Raw Extraction Data</span>
-                        <span className="text-label-sm text-on-surface-variant">(Advanced)</span>
-                      </div>
-                      <span className="material-symbols-outlined text-on-surface-variant">{showRawData ? 'expand_less' : 'expand_more'}</span>
-                    </button>
-
-                    {showRawData && (
-                      <div className="border-t border-outline-variant">
-                        {/* Tabs */}
-                        <div className="flex border-b border-outline-variant">
+                  {/* Global Instruction Box */}
+                  <div className="bg-surface-container-lowest border border-primary/30 rounded-xl p-4 mb-6 shadow-sm">
+                    <div className="flex items-start gap-3">
+                      <span className="material-symbols-outlined text-primary mt-1">tips_and_updates</span>
+                      <div className="flex-1">
+                        <h4 className="text-label-lg font-bold text-on-surface mb-1">Global AI Instruction (Bulk Extract)</h4>
+                        <p className="text-body-sm text-on-surface-variant mb-3">
+                          Missing properties across multiple items? Give the AI a single instruction to re-scan the document and update all unlocked entities automatically.
+                        </p>
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            placeholder="e.g., 'Find the material and operating pressure for all components'"
+                            className="flex-1 text-body-md p-2 border border-outline-variant rounded-md focus:outline-none focus:border-primary"
+                            value={globalFeedback}
+                            onChange={(e) => setGlobalFeedback(e.target.value)}
+                            disabled={isProcessingGlobal}
+                            onKeyDown={(e) => e.key === 'Enter' && handleGlobalImprovement()}
+                          />
                           <button
-                            onClick={() => setActiveRawTab('chunks')}
-                            className={`flex-1 py-2.5 text-label-md font-bold text-center border-b-2 transition-colors ${activeRawTab === 'chunks' ? 'border-primary text-primary' : 'border-transparent text-on-surface-variant'}`}
+                            onClick={handleGlobalImprovement}
+                            disabled={isProcessingGlobal || !globalFeedback.trim()}
+                            className="px-4 py-2 bg-primary hover:bg-primary/90 text-white font-bold rounded-md flex items-center gap-2 disabled:opacity-50 transition-colors"
                           >
-                            Text Chunks ({chunks.length})
-                          </button>
-                          <button
-                            onClick={() => setActiveRawTab('entities')}
-                            className={`flex-1 py-2.5 text-label-md font-bold text-center border-b-2 transition-colors ${activeRawTab === 'entities' ? 'border-primary text-primary' : 'border-transparent text-on-surface-variant'}`}
-                          >
-                            Entities ({entities.length})
+                            {isProcessingGlobal ? (
+                              <><span className="material-symbols-outlined text-[18px] animate-spin">sync</span> Scanning...</>
+                            ) : (
+                              <><span className="material-symbols-outlined text-[18px]">auto_awesome</span> Apply to All</>
+                            )}
                           </button>
                         </div>
+                      </div>
+                    </div>
+                  </div>
 
-                        <div className="p-4 space-y-3 max-h-[400px] overflow-y-auto custom-scrollbar">
-                          {activeRawTab === 'chunks' && chunks.map(chunk => (
-                            <div key={chunk.id} className="border border-outline-variant rounded-lg p-3 bg-white text-sm">
-                              <div className="flex justify-between items-start mb-1">
-                                <span className="text-label-sm font-mono text-outline">Page {chunk.page_number ?? 'N/A'}</span>
-                                <div className="flex items-center gap-2">
-                                  {chunk.is_locked && (
-                                    <span className="text-orange-500 flex items-center gap-1 text-label-sm">
-                                      <span className="material-symbols-outlined text-[14px]">lock</span>
-                                    </span>
-                                  )}
-                                  {editingChunkId !== chunk.id && (
-                                    <button onClick={() => { setEditingChunkId(chunk.id); setEditChunkText(chunk.text); }}
-                                      className="text-primary hover:bg-primary-container p-0.5 rounded-sm">
-                                      <span className="material-symbols-outlined text-[16px]">edit</span>
-                                    </button>
-                                  )}
-                                </div>
-                              </div>
-                              {editingChunkId === chunk.id ? (
-                                <div className="mt-1 space-y-2">
-                                  <textarea value={editChunkText} onChange={e => setEditChunkText(e.target.value)}
-                                    className="w-full h-24 p-2 border border-primary rounded-sm text-body-sm focus:outline-none focus:ring-1 focus:ring-primary" />
-                                  <div className="flex gap-2 justify-end">
-                                    <button onClick={() => setEditingChunkId(null)} className="px-2 py-1 text-label-sm text-on-surface-variant">Cancel</button>
-                                    <button onClick={() => handleSaveChunk(chunk.id)} className="px-2 py-1 bg-primary text-on-primary text-label-sm rounded-sm">Save & Lock</button>
-                                  </div>
-                                </div>
-                              ) : (
-                                <p className="text-body-sm text-on-surface whitespace-pre-wrap leading-relaxed">{chunk.text}</p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {entities.map((ent) => (
+                      <div key={ent.id} className={`border rounded-xl bg-white shadow-sm overflow-hidden flex flex-col ${ent.is_locked ? 'border-lime-300 ring-1 ring-lime-300' : 'border-outline-variant'}`}>
+                        {/* Card Header */}
+                        <div className="p-4 border-b border-outline-variant bg-surface-container-lowest flex items-start justify-between gap-2">
+                          <div>
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="bg-primary/10 text-primary px-2 py-0.5 rounded text-label-sm font-bold border border-primary/20">
+                                {ent.type}
+                              </span>
+                              {ent.criticality === 'critical' && (
+                                <span className="text-red-600 material-symbols-outlined text-[16px]" title="Critical Asset">warning</span>
                               )}
                             </div>
-                          ))}
-
-                          {activeRawTab === 'entities' && entities.map(ent => (
-                            <div key={ent.id} className="border border-outline-variant rounded-lg p-3 bg-white text-sm">
-                              <div className="flex items-center gap-2 mb-2">
-                                <span className="bg-primary/10 text-primary px-1.5 py-0.5 rounded text-label-sm font-bold border border-primary/20">{ent.type}</span>
-                                <span className="font-semibold text-on-surface">{ent.name}</span>
-                                <span className="text-label-sm text-outline ml-auto">Page {ent.source_page ?? 'N/A'}</span>
-                              </div>
-                              <div className="bg-surface-container-low rounded p-2 font-mono text-xs text-on-surface-variant">
-                                {Object.entries(ent.properties || {}).map(([k, v]) => (
-                                  <div key={k}><span className="font-semibold text-on-surface">{k}:</span> {typeof v === 'object' ? JSON.stringify(v) : String(v)}</div>
-                                ))}
-                              </div>
+                            <h4 className="text-title-lg font-bold text-on-surface">{ent.name}</h4>
+                            <p className="text-label-sm text-on-surface-variant mt-0.5">Source: Page {ent.source_page ?? 'N/A'}</p>
+                          </div>
+                          
+                          {/* Confidence Indicator */}
+                          <div className="flex flex-col items-end">
+                            <span className={`text-label-sm font-bold ${(ent.confidence_composite || 0) >= 0.8 ? 'text-lime-600' : (ent.confidence_composite || 0) >= 0.5 ? 'text-orange-500' : 'text-red-500'}`}>
+                                {Math.round((ent.confidence_composite || 0) * 100)}% Conf
+                            </span>
+                            <div className="w-12 h-1.5 bg-surface-container rounded-full mt-1 overflow-hidden">
+                                <div className={`h-full ${(ent.confidence_composite || 0) >= 0.8 ? 'bg-lime-500' : (ent.confidence_composite || 0) >= 0.5 ? 'bg-orange-500' : 'bg-red-500'}`} style={{width: `${(ent.confidence_composite || 0) * 100}%`}}></div>
                             </div>
-                          ))}
+                          </div>
+                        </div>
+
+                        {/* Card Body (Properties) */}
+                        <div className="p-4 flex-1">
+                          {ent.rule_violations && ent.rule_violations.length > 0 && (
+                            <div className="mb-4 bg-red-50 border border-red-200 rounded-md p-2 flex items-start gap-2">
+                               <span className="material-symbols-outlined text-[16px] text-red-600 mt-0.5">error</span>
+                               <span className="text-label-sm text-red-800">Violation: {ent.rule_violations.join(', ')}</span>
+                            </div>
+                          )}
+
+                          <div className="space-y-3">
+                            {ent.properties && Object.keys(ent.properties).length > 0 ? (
+                                Object.entries(ent.properties).map(([k, v]) => (
+                                    <div key={k}>
+                                        <p className="text-label-sm text-on-surface-variant uppercase tracking-wider mb-0.5">{k.replace(/_/g, ' ')}</p>
+                                        <p className="text-body-md text-on-surface font-medium">{typeof v === 'object' ? JSON.stringify(v) : String(v)}</p>
+                                    </div>
+                                ))
+                            ) : (
+                                <p className="text-body-md text-on-surface-variant italic">No properties extracted.</p>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Card Footer (Agentic Loop & Review) */}
+                        <div className="p-3 bg-surface-container-lowest border-t border-outline-variant mt-auto">
+                          {/* If currently improving this specific entity, show the feedback loop UI */}
+                          {improvingEntityId === ent.id ? (
+                             <div className="space-y-3">
+                               {!proposedEntityUpdate ? (
+                                 <>
+                                   <textarea
+                                     autoFocus
+                                     placeholder="Tell the AI what's wrong (e.g., 'The pressure should be 500 psi')..."
+                                     className="w-full text-body-sm p-2 border border-primary rounded-md focus:outline-none focus:ring-1 focus:ring-primary min-h-[80px] resize-y"
+                                     value={entityFeedback}
+                                     onChange={(e) => setEntityFeedback(e.target.value)}
+                                     disabled={isImprovingEntity}
+                                   />
+                                   <div className="flex justify-end gap-2">
+                                     <button 
+                                        onClick={() => { setImprovingEntityId(null); setEntityFeedback(''); }}
+                                        className="px-3 py-1.5 text-label-sm font-bold text-on-surface-variant hover:bg-surface-container rounded-sm"
+                                        disabled={isImprovingEntity}
+                                     >
+                                        Cancel
+                                     </button>
+                                     <button 
+                                        onClick={() => handleRequestEntityImprovement(ent.id)}
+                                        className="px-3 py-1.5 text-label-sm font-bold bg-primary text-on-primary rounded-sm flex items-center gap-1 disabled:opacity-50"
+                                        disabled={isImprovingEntity || !entityFeedback.trim()}
+                                     >
+                                        {isImprovingEntity ? (
+                                           <><span className="material-symbols-outlined text-[16px] animate-spin">sync</span> Thinking...</>
+                                        ) : 'Generate Fix'}
+                                     </button>
+                                   </div>
+                                 </>
+                               ) : (
+                                 <div className="bg-primary/5 border border-primary/30 p-3 rounded-lg">
+                                    <div className="flex items-center gap-2 mb-2">
+                                      <span className="material-symbols-outlined text-[16px] text-primary">auto_awesome</span>
+                                      <span className="text-label-sm font-bold text-primary">Proposed Fix:</span>
+                                    </div>
+                                    <div className="bg-white border border-outline-variant rounded p-2 text-xs font-mono mb-3 max-h-32 overflow-y-auto">
+                                      {JSON.stringify(proposedEntityUpdate.properties, null, 2)}
+                                    </div>
+                                    <div className="flex justify-end gap-2">
+                                     <button 
+                                        onClick={() => { setProposedEntityUpdate(null); setEntityFeedback(''); }}
+                                        className="px-3 py-1.5 text-label-sm font-bold text-on-surface-variant hover:bg-surface-container rounded-sm"
+                                     >
+                                        Discard
+                                     </button>
+                                     <button 
+                                        onClick={handleAcceptEntityUpdate}
+                                        className="px-3 py-1.5 text-label-sm font-bold bg-lime-600 hover:bg-lime-700 text-white rounded-sm flex items-center gap-1"
+                                     >
+                                        <span className="material-symbols-outlined text-[16px]">check_circle</span> Accept & Apply
+                                     </button>
+                                   </div>
+                                 </div>
+                               )}
+                             </div>
+                          ) : (
+                            <div className="flex items-center justify-between">
+                              {ent.is_locked ? (
+                                <span className="text-lime-600 text-label-sm font-bold flex items-center gap-1">
+                                  <span className="material-symbols-outlined text-[16px]">check_circle</span> Approved
+                                </span>
+                              ) : (
+                                <div className="flex items-center gap-3">
+                                  {ent.review_status === 'rejected' && (
+                                    <span className="text-red-600 text-label-sm font-bold flex items-center gap-1 bg-red-50 px-2 py-1 rounded">
+                                      <span className="material-symbols-outlined text-[16px]">assignment_return</span> Sent Back by Plant Manager
+                                    </span>
+                                  )}
+                                  <div className="flex gap-2">
+                                    <button onClick={() => handleReviewAction(ent.id, 'approve', 'looks_good')} className="px-3 py-1.5 bg-surface-container hover:bg-lime-100 hover:text-lime-800 rounded-sm text-label-sm font-bold transition-colors">Approve</button>
+                                  </div>
+                                </div>
+                              )}
+                              
+                              <button 
+                                onClick={() => setImprovingEntityId(ent.id)} 
+                                className="px-3 py-1.5 text-primary hover:bg-primary-container rounded-sm text-label-sm font-bold transition-colors flex items-center gap-1"
+                              >
+                                <span className="material-symbols-outlined text-[16px]">edit</span>
+                                Improve with AI
+                              </button>
+                            </div>
+                          )}
                         </div>
                       </div>
-                    )}
+                    ))}
                   </div>
                 </div>
+              )}
 
-                {/* AI Improvement Footer */}
-                {docDetails.status === 'pending_review' && (
-                  <div className="border-t border-outline-variant bg-white p-4 flex items-center gap-3 flex-shrink-0">
-                    <span className="material-symbols-outlined text-primary">auto_awesome</span>
-                    <input
-                      value={feedback}
-                      onChange={e => setFeedback(e.target.value)}
-                      placeholder="Provide feedback to re-extract with AI..."
-                      className="flex-1 px-3 py-2 border border-outline-variant rounded-sm text-body-md focus:outline-none focus:ring-1 focus:ring-primary"
-                      onKeyDown={e => { if (e.key === 'Enter') handleImprove(); }}
-                    />
-                    <button
-                      onClick={handleImprove}
-                      disabled={!feedback.trim() || improving}
-                      className="bg-secondary text-on-secondary px-4 py-2 rounded-sm font-label-md flex items-center gap-2 disabled:opacity-50"
-                    >
-                      {improving ? (
-                        <><span className="material-symbols-outlined animate-spin text-[18px]">sync</span> Processing...</>
-                      ) : (
-                        <><span className="material-symbols-outlined text-[18px]">psychology</span> Re-Extract</>
-                      )}
-                    </button>
+              {/* Advanced: Raw Data Drawer */}
+              <div className="hub-card overflow-hidden mt-8">
+                <button
+                  onClick={() => setShowRawData(!showRawData)}
+                  className="w-full flex items-center justify-between p-4 bg-surface-container-lowest hover:bg-surface-container-low transition-colors"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="material-symbols-outlined text-on-surface-variant">data_object</span>
+                    <span className="text-title-md font-bold text-on-surface">Raw Chunking Data</span>
+                    <span className="text-label-sm text-on-surface-variant">(Advanced)</span>
+                  </div>
+                  <span className="material-symbols-outlined text-on-surface-variant">{showRawData ? 'expand_less' : 'expand_more'}</span>
+                </button>
+
+                {showRawData && (
+                  <div className="border-t border-outline-variant p-4 space-y-3 max-h-[400px] overflow-y-auto custom-scrollbar">
+                    {chunks.map(chunk => (
+                      <div key={chunk.id} className="border border-outline-variant rounded-lg p-3 bg-white text-sm">
+                        <div className="flex justify-between items-start mb-1">
+                          <span className="text-label-sm font-mono text-outline">Page {chunk.page_number ?? 'N/A'}</span>
+                          <div className="flex items-center gap-2">
+                            {chunk.is_locked && (
+                              <span className="text-orange-500 flex items-center gap-1 text-label-sm">
+                                <span className="material-symbols-outlined text-[14px]">lock</span>
+                              </span>
+                            )}
+                            {editingChunkId !== chunk.id && (
+                              <button onClick={() => { setEditingChunkId(chunk.id); setEditChunkText(chunk.text); }}
+                                className="text-primary hover:bg-primary-container p-0.5 rounded-sm">
+                                <span className="material-symbols-outlined text-[16px]">edit</span>
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                        {editingChunkId === chunk.id ? (
+                          <div className="mt-1 space-y-2">
+                            <textarea value={editChunkText} onChange={e => setEditChunkText(e.target.value)}
+                              className="w-full h-24 p-2 border border-primary rounded-sm text-body-sm focus:outline-none focus:ring-1 focus:ring-primary" />
+                            <div className="flex gap-2 justify-end">
+                              <button onClick={() => setEditingChunkId(null)} className="px-2 py-1 text-label-sm text-on-surface-variant">Cancel</button>
+                              <button onClick={() => handleSaveChunk(chunk.id)} className="px-2 py-1 bg-primary text-on-primary text-label-sm rounded-sm">Save & Lock</button>
+                            </div>
+                          </div>
+                        ) : (
+                          <p className="text-body-sm text-on-surface whitespace-pre-wrap leading-relaxed">{chunk.text}</p>
+                        )}
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>
+
             </div>
           </>
         ) : null}

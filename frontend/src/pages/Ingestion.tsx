@@ -1,15 +1,14 @@
 import { useState, useRef, useEffect } from 'react';
+import ProcessingTrace from '../components/ProcessingTrace';
 
 const ACCEPTED_TYPES = '.pdf,.csv,.xlsx,.png,.jpg,.jpeg,.webp';
-const DOC_TYPES = ['manual', 'work_order', 'pid', 'standard', 'safety_procedure'] as const;
-type DocType = typeof DOC_TYPES[number];
-
-interface UploadedDoc {
-  document_id: string;
-  filename: string;
-  status: string;
-  storage_url: string;
-}
+const DOC_TYPES = [
+  { value: 'manual', label: 'Technical Manual' },
+  { value: 'work_order', label: 'Work Order' },
+  { value: 'pid', label: 'P&ID Drawing' },
+  { value: 'standard', label: 'Industry Standard' },
+  { value: 'safety_procedure', label: 'Safety Procedure' }
+] as const;
 
 interface Document {
   id: string;
@@ -18,14 +17,15 @@ interface Document {
   upload_date: string;
   status: string;
   storage_url: string;
+  current_step: string;
+  step_status: 'pending' | 'active' | 'complete' | 'error';
+  step_detail?: string;
+  step_history?: any[];
 }
 
 export default function Ingestion() {
-  const [file, setFile] = useState<File | null>(null);
-  const [docType, setDocType] = useState<DocType>('manual');
+  const [docType, setDocType] = useState('work_order');
   const [uploading, setUploading] = useState(false);
-  const [result, setResult] = useState<UploadedDoc | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loadingDocs, setLoadingDocs] = useState(true);
   const [isDragOver, setIsDragOver] = useState(false);
@@ -46,18 +46,16 @@ export default function Ingestion() {
     fetchDocuments();
   }, []);
 
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragOver(false);
-    const dropped = e.dataTransfer.files[0];
-    if (dropped) setFile(dropped);
-  };
+  useEffect(() => {
+    const hasActive = documents.some(d => d.status === 'processing' || d.status === 'processing_active');
+    if (!hasActive) return;
+    const interval = setInterval(fetchDocuments, 2000);
+    return () => clearInterval(interval);
+  }, [documents]);
 
-  const handleUpload = async () => {
+  const handleUpload = async (file: File) => {
     if (!file) return;
     setUploading(true);
-    setError(null);
-    setResult(null);
 
     const formData = new FormData();
     formData.append('file', file);
@@ -68,195 +66,216 @@ export default function Ingestion() {
         method: 'POST',
         body: formData,
       });
-      if (!res.ok) {
-        const errBody = await res.json();
-        throw new Error(errBody.detail || 'Upload failed');
+      if (res.ok) {
+        setTimeout(fetchDocuments, 500);
       }
-      const data: UploadedDoc = await res.json();
-      setResult(data);
-      setFile(null);
-      // Refresh document list
-      setTimeout(fetchDocuments, 1000);
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Upload failed');
+    } catch (err) {
+      console.error(err);
     } finally {
       setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 
-  const getFileIcon = (filename: string) => {
-    const ext = filename.toLowerCase().split('.').pop();
-    if (ext === 'pdf') return { icon: 'picture_as_pdf', color: 'text-red-600 bg-red-50' };
-    if (ext === 'csv' || ext === 'xlsx') return { icon: 'table_chart', color: 'text-green-600 bg-green-50' };
-    if (['png','jpg','jpeg','webp'].includes(ext || '')) return { icon: 'image', color: 'text-blue-600 bg-blue-50' };
-    return { icon: 'description', color: 'text-gray-600 bg-gray-50' };
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+    const dropped = e.dataTransfer.files[0];
+    if (dropped) handleUpload(dropped);
   };
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'approved': return 'bg-lime-100 text-lime-800 border border-lime-200';
-      case 'pending_review': return 'bg-yellow-100 text-yellow-800 border border-yellow-200';
-      case 'processing': return 'bg-blue-100 text-blue-800 border border-blue-200';
-      case 'failed': return 'bg-red-100 text-red-800 border border-red-200';
-      default: return 'bg-gray-100 text-gray-800 border border-gray-200';
-    }
+  const STEP_LABELS: Record<string, string> = {
+    queued: 'Queued for processing',
+    parsing: 'Reading document',
+    extracting: 'Extracting entities & relationships',
+    chunking: 'Chunking & generating embeddings',
+    linking: 'Building knowledge graph links',
+    pending_review: 'Waiting for human review',
   };
 
   return (
-    <div className="p-6 space-y-6 min-h-full">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+    <div className="p-6 md:p-8 max-w-5xl mx-auto space-y-8 w-full">
+      {/* Header Section */}
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
-          <h1 className="text-headline-lg font-headline-lg text-on-surface">Document Ingestion & Review</h1>
-          <p className="text-body-md text-on-surface-variant mt-1">Upload and process industrial documents for knowledge extraction.</p>
+          <h1 className="text-display-sm font-display-sm text-on-surface">Document Ingestion</h1>
+          <p className="text-body-lg text-on-surface-variant mt-1 max-w-2xl">Upload technical manuals, P&IDs, or work orders to be parsed, chunked, and mapped into the knowledge graph.</p>
         </div>
-        <div className="flex items-center gap-2 px-3 py-1.5 bg-surface-container rounded-sm">
-          <span className="w-2 h-2 bg-lime-500 rounded-full animate-pulse"></span>
-          <span className="text-label-md text-on-surface-variant">Pipeline Active</span>
-        </div>
-      </div>
-
-      {/* Upload Card */}
-      <div className="bg-white border border-outline-variant rounded-xl shadow-sm p-6 space-y-5">
-        <h2 className="text-headline-md font-headline-md text-on-surface border-b border-surface-container-low pb-3">Upload New Document</h2>
-
-        {/* Drag & Drop Zone */}
-        <div
-          className={`border-2 border-dashed rounded-xl p-10 flex flex-col items-center justify-center text-center transition-all cursor-pointer ${isDragOver ? 'border-primary bg-primary-fixed/30' : file ? 'border-lime-400 bg-lime-50' : 'border-outline-variant hover:border-primary hover:bg-surface-container-low'}`}
-          onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }}
-          onDragLeave={() => setIsDragOver(false)}
-          onDrop={handleDrop}
-          onClick={() => fileInputRef.current?.click()}
-        >
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept={ACCEPTED_TYPES}
-            className="hidden"
-            onChange={(e) => setFile(e.target.files?.[0] || null)}
-          />
-          {file ? (
-            <>
-              <span className="material-symbols-outlined text-5xl text-lime-600 mb-3">check_circle</span>
-              <p className="text-headline-md font-headline-md text-on-surface">{file.name}</p>
-              <p className="text-body-md text-on-surface-variant mt-1">{(file.size / 1024).toFixed(1)} KB</p>
-              <button
-                className="mt-3 text-label-md text-red-500 hover:underline"
-                onClick={(e) => { e.stopPropagation(); setFile(null); }}
-              >
-                Remove
-              </button>
-            </>
-          ) : (
-            <>
-              <span className="material-symbols-outlined text-5xl text-outline mb-3">cloud_upload</span>
-              <p className="text-headline-md font-headline-md text-on-surface">Drop your file here or click to browse</p>
-              <p className="text-body-md text-on-surface-variant mt-2">Supports PDF, CSV, XLSX, PNG, JPG, WEBP</p>
-            </>
-          )}
-        </div>
-
-        {/* Document Type Selector */}
-        <div className="flex flex-col gap-2">
-          <label className="text-label-md font-label-md text-on-surface-variant uppercase tracking-wider">Document Type</label>
+        <div className="w-full md:w-64">
+          <label className="text-label-sm font-bold text-on-surface-variant mb-1.5 block">Document Type</label>
           <select
-            className="w-full px-4 py-3 bg-white border border-outline-variant rounded-sm text-body-md text-on-surface focus:ring-1 focus:ring-primary focus:border-primary outline-none"
+            className="w-full px-4 py-2.5 bg-surface-container-lowest border border-outline-variant rounded-xl text-body-md text-on-surface focus:ring-2 focus:ring-primary focus:border-transparent outline-none shadow-sm transition-all"
             value={docType}
-            onChange={(e) => setDocType(e.target.value as DocType)}
+            onChange={(e) => setDocType(e.target.value)}
           >
-            <option value="manual">Technical Manual</option>
-            <option value="work_order">Work Order</option>
-            <option value="pid">P&ID Drawing</option>
-            <option value="standard">Industry Standard</option>
-            <option value="safety_procedure">Safety Procedure</option>
+            {DOC_TYPES.map(type => (
+              <option key={type.value} value={type.value}>{type.label}</option>
+            ))}
           </select>
         </div>
-
-        {/* Submit Button */}
-        <button
-          onClick={handleUpload}
-          disabled={!file || uploading}
-          className="w-full bg-primary-container hover:bg-primary text-on-primary py-4 rounded-sm font-headline-md transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {uploading ? (
-            <>
-              <span className="material-symbols-outlined animate-spin">progress_activity</span>
-              Uploading & Processing...
-            </>
-          ) : (
-            <>
-              <span className="material-symbols-outlined">upload</span>
-              Upload Document
-            </>
-          )}
-        </button>
-
-        {/* Success / Error notifications */}
-        {result && (
-          <div className="flex items-start gap-3 p-4 bg-lime-50 border border-lime-200 rounded-lg">
-            <span className="material-symbols-outlined text-lime-600">check_circle</span>
-            <div>
-              <p className="text-body-md font-semibold text-lime-900">Upload Successful</p>
-              <p className="text-label-md text-lime-700 mt-1">Document ID: {result.document_id}</p>
-              <p className="text-label-md text-lime-700">Status: <span className="font-semibold">{result.status}</span> — processing in background.</p>
-            </div>
-          </div>
-        )}
-        {error && (
-          <div className="flex items-start gap-3 p-4 bg-red-50 border border-red-200 rounded-lg">
-            <span className="material-symbols-outlined text-red-600">error</span>
-            <p className="text-body-md text-red-800">{error}</p>
-          </div>
-        )}
       </div>
 
-      {/* Document Library */}
-      <div className="bg-white border border-outline-variant rounded-xl shadow-sm">
-        <div className="p-5 border-b border-outline-variant flex items-center justify-between">
-          <h2 className="text-headline-md font-headline-md text-on-surface">Document Library</h2>
-          <button onClick={fetchDocuments} className="text-label-md text-primary hover:underline flex items-center gap-1">
-            <span className="material-symbols-outlined text-base">refresh</span>Refresh
-          </button>
+      {/* Large Dropzone */}
+      <div 
+        className={`relative overflow-hidden flex flex-col items-center justify-center p-12 hub-card border-2 border-dashed transition-all duration-300 ${isDragOver ? 'border-primary bg-primary/5 scale-[1.02]' : 'border-outline-variant hover:border-primary/50 hover:bg-surface-container-low'}`}
+        onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }}
+        onDragLeave={() => setIsDragOver(false)}
+        onDrop={handleDrop}
+      >
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept={ACCEPTED_TYPES}
+          className="hidden"
+          onChange={(e) => {
+            if (e.target.files?.[0]) handleUpload(e.target.files[0]);
+          }}
+        />
+        
+        <div 
+          className="flex flex-col items-center gap-4 cursor-pointer text-center relative z-10"
+          onClick={() => fileInputRef.current?.click()}
+        >
+          <div className={`w-16 h-16 rounded-full flex items-center justify-center transition-colors duration-300 ${isDragOver ? 'bg-primary text-white shadow-lg' : 'bg-primary/10 text-primary'}`}>
+            {uploading ? (
+              <span className="material-symbols-outlined text-3xl animate-spin">progress_activity</span>
+            ) : (
+              <span className="material-symbols-outlined text-3xl">cloud_upload</span>
+            )}
+          </div>
+          <div>
+            <h3 className="text-headline-sm font-bold text-on-surface mb-1">
+              {uploading ? 'Uploading Document...' : 'Drag & Drop Files Here'}
+            </h3>
+            <p className="text-body-md text-on-surface-variant">
+              or <span className="text-primary hover:underline font-semibold">browse your computer</span>
+            </p>
+          </div>
+          <div className="flex gap-2 mt-2">
+            <span className="px-2.5 py-1 rounded-md bg-surface-container text-label-sm text-on-surface-variant font-medium">.PDF</span>
+            <span className="px-2.5 py-1 rounded-md bg-surface-container text-label-sm text-on-surface-variant font-medium">.CSV</span>
+            <span className="px-2.5 py-1 rounded-md bg-surface-container text-label-sm text-on-surface-variant font-medium">Images</span>
+          </div>
         </div>
-        <div className="divide-y divide-outline-variant">
-          {loadingDocs ? (
-            <div className="p-8 flex items-center justify-center gap-3 text-on-surface-variant">
-              <span className="material-symbols-outlined animate-spin">progress_activity</span>
-              Loading documents...
-            </div>
-          ) : documents.length === 0 ? (
-            <div className="p-8 flex flex-col items-center justify-center text-on-surface-variant">
-              <span className="material-symbols-outlined text-5xl mb-3">folder_open</span>
-              <p className="text-body-md">No documents uploaded yet.</p>
-            </div>
-          ) : documents.map((doc) => {
-            const fileIcon = getFileIcon(doc.filename);
-            return (
-              <div key={doc.id} className="flex items-center gap-4 px-5 py-4 hover:bg-surface-container-low transition-colors">
-                <div className={`p-2 rounded ${fileIcon.color}`}>
-                  <span className="material-symbols-outlined">{fileIcon.icon}</span>
+        
+        {/* Subtle background decoration */}
+        <span className="material-symbols-outlined absolute -right-8 -bottom-8 text-9xl text-on-surface-variant opacity-[0.03] rotate-12 pointer-events-none" style={{ fontVariationSettings: "'FILL' 1" }}>
+          upload_file
+        </span>
+      </div>
+
+      {/* Document List */}
+      <div className="space-y-3 pt-4">
+        {loadingDocs ? (
+          <div className="p-8 flex items-center justify-center text-on-surface-variant">
+            <span className="material-symbols-outlined animate-spin mr-2">progress_activity</span>
+            Loading...
+          </div>
+        ) : documents.length === 0 ? (
+          <div className="p-12 text-center text-on-surface-variant border border-dashed border-outline-variant rounded-xl">
+            No documents uploaded yet.
+          </div>
+        ) : documents.map((doc) => {
+          
+          const isError = doc.status === 'failed';
+          const isProcessing = doc.status === 'processing' || doc.status === 'processing_active';
+          const isPendingReview = doc.status === 'pending_review';
+          const isQueued = doc.current_step === 'queued' && isProcessing;
+          
+          const stepLabel = doc.step_detail ? STEP_LABELS[doc.current_step || ''] || 'Processing...' : STEP_LABELS[doc.current_step || ''] || 'Processing...';
+
+          return (
+            <div key={doc.id} className={`p-4 hub-card transition-all ${isQueued ? 'opacity-70' : ''}`}>
+              <div className="flex items-start justify-between">
+                
+                <div className="flex gap-4 flex-1">
+                  <div className="mt-1 flex-shrink-0">
+                    {isError ? (
+                      <span className="material-symbols-outlined text-red-500">close</span>
+                    ) : isPendingReview || doc.status === 'approved' ? (
+                      <span className="material-symbols-outlined text-on-surface">check</span>
+                    ) : isQueued ? (
+                      <span className="material-symbols-outlined text-on-surface-variant">schedule</span>
+                    ) : (
+                      <span className="material-symbols-outlined text-on-surface">description</span>
+                    )}
+                  </div>
+                  
+                  <div className="flex-1 space-y-1">
+                    <p className="text-body-lg font-medium text-on-surface flex items-center gap-2">
+                      {doc.filename}
+                      {doc.storage_url && doc.storage_url !== '#' && (
+                        <a href={doc.storage_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-primary hover:underline text-xs font-semibold ml-2">
+                          <span className="material-symbols-outlined text-[14px]">open_in_new</span> View
+                        </a>
+                      )}
+                    </p>
+                    
+                    {/* Processing Trace Dropdown (Always shown unless queued) */}
+                    {!isQueued && (
+                      <div>
+                        <details className="mt-0.5 group">
+                          <summary className="text-label-sm text-on-surface-variant cursor-pointer select-none flex items-center hover:text-on-surface transition-colors">
+                            {isProcessing ? STEP_LABELS[doc.current_step || ''] || 'Processing...' : 'Processing Steps'}
+                            {isProcessing && doc.step_detail && ` · ${doc.step_detail}`}
+                            <span className="material-symbols-outlined text-[16px] ml-1 transition-transform group-open:rotate-180">expand_more</span>
+                            
+                            {isProcessing && (
+                                <span className="material-symbols-outlined text-primary text-[14px] animate-spin ml-auto">progress_activity</span>
+                            )}
+                          </summary>
+                          
+                          <div className="mt-2 pl-1 border-l-2 border-outline-variant/30 ml-1">
+                            <ProcessingTrace 
+                              currentStep={doc.current_step || (isPendingReview || doc.status === 'approved' ? 'linking' : 'queued')} 
+                              stepStatus={doc.step_status || (isPendingReview || doc.status === 'approved' ? 'complete' : 'pending')} 
+                              stepDetail={doc.step_detail} 
+                            />
+                          </div>
+                        </details>
+                        
+                        {/* Progress Bar (Only when processing) */}
+                        {isProcessing && (
+                          <div className="h-1 bg-surface-container mt-3 rounded-full overflow-hidden flex">
+                            <div className="h-full bg-lime-500 w-1/4"></div>
+                            <div className="h-full bg-blue-500 w-1/4 animate-pulse"></div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    
+                    {isError && (
+                      <p className="text-label-sm text-red-500 mt-2">
+                        {doc.step_detail || 'Processing failed'}
+                      </p>
+                    )}
+                    
+                    {isPendingReview && (
+                      <p className="text-label-sm text-on-surface-variant mt-2">Waiting for review</p>
+                    )}
+                    
+                    {isQueued && (
+                      <p className="text-label-sm text-on-surface-variant">Queued</p>
+                    )}
+                  </div>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-body-md text-on-surface font-medium truncate">{doc.filename}</p>
-                  <p className="text-label-sm text-on-surface-variant">{doc.type} • {new Date(doc.upload_date).toLocaleDateString()}</p>
+
+                <div className="ml-4 flex-shrink-0 flex items-center">
+                   {isPendingReview && (
+                     <span className="bg-yellow-900 text-yellow-300 text-label-sm px-3 py-1 rounded-full font-medium">Pending review</span>
+                   )}
+                   {isError && (
+                     <button className="flex items-center gap-1 border border-outline-variant px-3 py-1.5 rounded-lg text-label-sm hover:bg-surface-container-low transition-colors text-on-surface">
+                       <span className="material-symbols-outlined text-[16px]">refresh</span>
+                       Retry
+                     </button>
+                   )}
                 </div>
-                <span className={`px-2 py-0.5 text-label-sm rounded-sm ${getStatusBadge(doc.status)}`}>
-                  {doc.status.replace('_', ' ')}
-                </span>
-                {doc.storage_url && (
-                  <a
-                    href={doc.storage_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-primary hover:underline flex items-center gap-1 text-label-md flex-shrink-0"
-                  >
-                    <span className="material-symbols-outlined text-base">open_in_new</span>
-                  </a>
-                )}
+                
               </div>
-            );
-          })}
-        </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );

@@ -115,3 +115,61 @@ body {
     from { opacity: 0; transform: translateY(10px); }
     to { opacity: 1; transform: translateY(0); }
 }
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+  }
+}
+
+/* Premium Hub Geometry (From HyreNet) */
+:root {
+  --hub-radius-control: 11px;
+  --hub-radius-panel: 14px;
+  --hub-radius-card: 18px;
+  --hub-shadow-card: 0 1px 2px rgb(15 23 42 / 0.04), 0 12px 30px -24px rgb(15 23 42 / 0.3);
+  
+  --hub-timer-safe-bg: rgb(16 185 129 / 0.16);
+  --hub-timer-safe-border: rgb(110 231 183 / 0.38);
+  --hub-timer-safe-fg: #059669;
+
+  --hub-timer-warning-bg: rgb(245 158 11 / 0.17);
+  --hub-timer-warning-border: rgb(252 211 77 / 0.4);
+  --hub-timer-warning-fg: #d97706;
+
+  --hub-timer-critical-bg: rgb(239 68 68 / 0.17);
+  --hub-timer-critical-border: rgb(252 165 165 / 0.42);
+  --hub-timer-critical-fg: #dc2626;
+}
+
+.hub-card {
+  border-radius: var(--hub-radius-card);
+  box-shadow: var(--hub-shadow-card);
+  background-color: var(--color-surface-container-lowest);
+  border: 1px solid var(--color-outline-variant);
+}
+
+.hub-panel {
+  border-radius: var(--hub-radius-panel);
+}
+
+.hub-status-safe {
+  background-color: var(--hub-timer-safe-bg);
+  border: 1px solid var(--hub-timer-safe-border);
+  color: var(--hub-timer-safe-fg);
+}
+
+.hub-status-warning {
+  background-color: var(--hub-timer-warning-bg);
+  border: 1px solid var(--hub-timer-warning-border);
+  color: var(--hub-timer-warning-fg);
+}
+
+.hub-status-critical {
+  background-color: var(--hub-timer-critical-bg);
+  border: 1px solid var(--hub-timer-critical-border);
+  color: var(--hub-timer-critical-fg);
+}

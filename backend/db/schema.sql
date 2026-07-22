@@ -9,7 +9,11 @@ CREATE TABLE documents (
     storage_path TEXT,
     storage_url TEXT,
     status TEXT DEFAULT 'pending_review',
-    summary TEXT
+    summary TEXT,
+    current_step TEXT DEFAULT 'queued',
+    step_status TEXT DEFAULT 'pending',
+    step_history JSONB DEFAULT '[]',
+    step_detail TEXT
 );
 
 CREATE TABLE entities (

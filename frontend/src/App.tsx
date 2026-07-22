@@ -11,6 +11,7 @@ import Compliance from './pages/Compliance';
 import Lessons from './pages/Lessons';
 import Verification from './pages/Verification';
 import PlantManagerInbox from './pages/PlantManagerInbox';
+import GettingStarted from './pages/GettingStarted';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 
 function ProtectedRoute({ children, requireAdmin = false }: { children: React.ReactNode, requireAdmin?: boolean }) {
@@ -50,9 +51,11 @@ function AppRoutes() {
         </ProtectedRoute>
       }>
         <Route index element={
-          <Navigate to={user?.role === 'admin' ? "/admin" : "/copilot"} replace />
+          <Navigate to="/getting-started" replace />
         } />
         
+        <Route path="getting-started" element={<GettingStarted />} />
+
         {/* Admin only routes */}
         <Route path="admin" element={
           <ProtectedRoute requireAdmin>

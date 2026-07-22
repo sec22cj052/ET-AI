@@ -213,7 +213,7 @@ export default function RCA() {
           <div className="flex-1 overflow-y-auto custom-scrollbar">
             <div className="p-6 space-y-6 max-w-4xl mx-auto">
               {/* Report Header */}
-              <div className="bg-white border border-outline-variant rounded-xl p-6 shadow-sm">
+              <div className="hub-card p-6">
                 <div className="flex items-center gap-3 mb-4">
                   <span className="material-symbols-outlined text-primary text-3xl" style={{ fontVariationSettings: "'FILL' 1" }}>troubleshoot</span>
                   <div>
@@ -231,7 +231,7 @@ export default function RCA() {
 
               {/* Probable Root Causes */}
               {report.probable_root_causes?.length > 0 && (
-                <div className="bg-white border border-outline-variant rounded-xl p-6 shadow-sm">
+                <div className="hub-card p-6">
                   <h2 className="text-headline-md font-headline-md text-on-surface mb-4 flex items-center gap-2">
                     <span className="material-symbols-outlined text-red-500">warning</span>
                     Probable Root Causes
@@ -259,7 +259,7 @@ export default function RCA() {
 
               {/* Maintenance Timeline */}
               {report.maintenance_timeline?.length > 0 && (
-                <div className="bg-white border border-outline-variant rounded-xl p-6 shadow-sm">
+                <div className="hub-card p-6">
                   <h2 className="text-headline-md font-headline-md text-on-surface mb-4 flex items-center gap-2">
                     <span className="material-symbols-outlined text-blue-600">timeline</span>
                     Maintenance Timeline
@@ -289,7 +289,7 @@ export default function RCA() {
 
               {/* Recommended Actions */}
               {report.recommended_actions?.length > 0 && (
-                <div className="bg-white border border-outline-variant rounded-xl p-6 shadow-sm">
+                <div className="hub-card p-6">
                   <h2 className="text-headline-md font-headline-md text-on-surface mb-4 flex items-center gap-2">
                     <span className="material-symbols-outlined text-lime-600">task_alt</span>
                     Recommended Actions
@@ -312,7 +312,7 @@ export default function RCA() {
 
               {/* Citations */}
               {citations.length > 0 && (
-                <div className="bg-white border border-outline-variant rounded-xl p-6 shadow-sm">
+                <div className="hub-card p-6">
                   <h2 className="text-headline-md font-headline-md text-on-surface mb-4 flex items-center gap-2">
                     <span className="material-symbols-outlined text-on-surface-variant">description</span>
                     Source Documents

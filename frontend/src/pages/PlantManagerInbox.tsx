@@ -4,6 +4,7 @@ interface InboxItem {
   entity_id: string;
   equipment_tag: string;
   document_filename: string;
+  storage_url?: string;
   plain_language_summary: string;
   flagged_reason: string;
 }
@@ -38,7 +39,7 @@ export default function PlantManagerInbox() {
   
   const handleDecision = async (entityId: string, decision: 'confirm' | 'send_back') => {
     try {
-      const res = await fetch('/ingest/plant-manager/inbox/${entityId}/decide', {
+      const res = await fetch(`/ingest/plant-manager/inbox/${entityId}/decide`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ decision })
@@ -55,7 +56,7 @@ export default function PlantManagerInbox() {
 
   return (
     <div className="p-8 max-w-5xl mx-auto w-full">
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-display-sm font-display-sm text-on-surface">Compliance Inbox</h1>
           <p className="text-body-lg text-on-surface-variant mt-1">Review critical escalated extractions</p>
@@ -63,16 +64,26 @@ export default function PlantManagerInbox() {
         
         {data && (
           <div className="flex gap-4">
-            <div className="bg-surface-container rounded-xl p-4 text-center">
+            <div className="hub-card p-4 text-center">
               <span className="text-title-lg font-bold text-lime-700">{data.passed_clean_this_week}</span>
               <p className="text-label-sm text-on-surface-variant uppercase tracking-wider">Passed Clean</p>
             </div>
-            <div className="bg-surface-container rounded-xl p-4 text-center">
+            <div className="hub-card p-4 text-center">
               <span className="text-title-lg font-bold text-orange-700">{data.corrected_this_week}</span>
               <p className="text-label-sm text-on-surface-variant uppercase tracking-wider">Corrected</p>
             </div>
           </div>
         )}
+      </div>
+
+      <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-8 flex items-start gap-3">
+        <span className="material-symbols-outlined text-blue-600 mt-0.5">info</span>
+        <div>
+          <h3 className="text-label-lg font-bold text-blue-900">Level 3 Sign-Off Queue</h3>
+          <p className="text-body-sm text-blue-800 mt-1 leading-relaxed">
+            This inbox is exclusively for Plant Managers and Administrators. Items appear here only when the AI or a Data Steward flags a critical safety violation, missing signature, or compliance contradiction. Review the extracted anomaly alongside the source PDF and make an executive decision to either <strong>Confirm & Publish</strong> the exception to production, or <strong>Send Back</strong> for correction.
+          </p>
+        </div>
       </div>
       
       {loading ? (
@@ -90,7 +101,7 @@ export default function PlantManagerInbox() {
       ) : (
         <div className="space-y-4">
           {data?.items.map(item => (
-            <div key={item.entity_id} className="bg-white border border-outline-variant rounded-xl p-6 shadow-sm flex flex-col gap-4">
+            <div key={item.entity_id} className="hub-card p-6 flex flex-col gap-4">
               <div className="flex justify-between items-start">
                 <div>
                   <h3 className="text-title-lg font-bold text-on-surface flex items-center gap-2">
@@ -100,6 +111,11 @@ export default function PlantManagerInbox() {
                   <p className="text-body-sm text-on-surface-variant flex items-center gap-1 mt-1">
                     <span className="material-symbols-outlined text-[16px]">description</span>
                     Source: {item.document_filename}
+                    {item.storage_url && item.storage_url !== '#' && (
+                      <a href={item.storage_url} target="_blank" rel="noopener noreferrer" className="ml-2 flex items-center gap-1 text-primary hover:underline text-xs font-semibold">
+                        <span className="material-symbols-outlined text-[14px]">open_in_new</span> View PDF
+                      </a>
+                    )}
                   </p>
                 </div>
                 <div className="flex gap-3">

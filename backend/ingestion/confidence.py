@@ -86,9 +86,29 @@ async def calculate_confidence_score(
         for r in relationships
     ]
 
-    # Evaluate each rule
+    doc_row = await db.fetchrow("SELECT type FROM documents WHERE id = $1", document_id)
+    doc_type = doc_row["type"] if doc_row else "Unknown"
+
+    # Evaluate each rule dynamically based on document type
     results = []
+    
+    # Define which rules apply to generic reference documents (Manual, Procedure, Standard) vs specific records (WorkOrder)
+    generic_docs = ["Manual", "Procedure", "Standard"]
+    is_generic = any(t.lower() in doc_type.lower() for t in generic_docs)
+    
     for rule in RULES:
+        # Skip specific record rules for generic reference documents
+        if is_generic and rule["id"] in ["equipment_tag", "work_order_linked", "date_extraction"]:
+            results.append({
+                "id": rule["id"],
+                "name": rule["name"],
+                "weight": rule["weight"],
+                "passed": True,
+                "detail": f"Not applicable for document type: {doc_type} (Auto-passed)",
+                "description": rule["description"],
+            })
+            continue
+            
         passed, detail = _evaluate_rule(rule["id"], entity_list, chunk_list, rel_list)
         results.append({
             "id": rule["id"],

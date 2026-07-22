@@ -11,6 +11,7 @@ from ingestion.extract import extract_entities_from_text, generate_document_summ
 from ingestion.chunk_embed import chunk_text, embed_chunks
 from ingestion.confidence import calculate_confidence_score
 from ingestion.confidence_score import compute_entity_confidence
+from ingestion.progress import set_step
 
 from pydantic import BaseModel
 from typing import List, Optional
@@ -45,6 +46,7 @@ async def process_document_background(
 ):
     try:
         # 1. Parse Document
+        await set_step(db, document_id, "parsing", "active")
         pages = []
         ext = file_path.lower()
         if ext.endswith('.pdf'):
@@ -58,12 +60,18 @@ async def process_document_background(
             pages = await parse_image(file_path)
         else:
             print(f"Unsupported file type for async processing: {file_path}")
+            await set_step(db, document_id, "parsing", "error", f"Unsupported file type: {file_path}")
+            await db.execute("UPDATE documents SET status = 'failed' WHERE id = $1", document_id)
             return
+
+        await set_step(db, document_id, "parsing", "complete", f"{len(pages)} page(s) read")
 
         # Collect full text for summary generation
         full_text = "\n\n".join(p["text"] for p in pages if p.get("text"))
             
-        # 2. Extract Entities & Chunk/Embed
+        # 2. Extract Entities
+        await set_step(db, document_id, "extracting", "active")
+        entity_count = 0
         for page in pages:
             text = page["text"]
             page_num = page["page_number"]
@@ -114,17 +122,27 @@ async def process_document_background(
                 if not target_id:
                     target_id = await db.fetchval("SELECT id FROM entities WHERE name = $1", rel["target_name"])
                     
-                if source_id and target_id:
-                    rel_id = str(uuid.uuid4())
-                    await db.execute(
-                        """
-                        INSERT INTO entity_relationships (id, source_id, target_id, relationship_type)
-                        VALUES ($1, $2, $3, $4)
-                        """,
-                        rel_id, source_id, target_id, rel["relationship_type"]
-                    )
+                    if source_id and target_id:
+                        rel_id = str(uuid.uuid4())
+                        await db.execute(
+                            """
+                            INSERT INTO entity_relationships (id, source_id, target_id, relationship_type)
+                            VALUES ($1, $2, $3, $4)
+                            """,
+                            rel_id, source_id, target_id, rel["relationship_type"]
+                        )
+                
+                entity_count += len(entities)
+
+        await set_step(db, document_id, "extracting", "complete", f"{entity_count} entities found")
+        
+        # 3. Chunk and Embed
+        await set_step(db, document_id, "chunking", "active")
+        chunk_count = 0
+        for page in pages:
+            text = page["text"]
+            page_num = page["page_number"]
             
-            # Chunk and Embed
             chunks = chunk_text(text)
             embedded_chunks = await embed_chunks(chunks)
             
@@ -137,19 +155,45 @@ async def process_document_background(
                     """,
                     document_id, chunk["text"], json.dumps(chunk["embedding"]), page_num
                 )
-                
+            chunk_count += len(embedded_chunks)
+            
+        await set_step(db, document_id, "chunking", "complete", f"{chunk_count} chunks embedded")
+        
+        # 4. Linking
+        await set_step(db, document_id, "linking", "active")
+        # Linking is implicitly handled by the relationships added above, but we mark the step
+        await set_step(db, document_id, "linking", "complete", "Graph links built")
+        
         # Generate AI summary for HITL review
         summary = ""
         if full_text.strip():
             summary = await generate_document_summary(full_text)
 
-        await db.execute(
-            "UPDATE documents SET status = 'pending_review', summary = $2 WHERE id = $1", 
-            document_id, summary
-        )
+        # Calculate final confidence score to determine routing
+        confidence = await calculate_confidence_score(document_id, db)
+        score = confidence["score"]
+        
+        if score >= 80:
+            # Auto-approve and bypass HITL
+            await set_step(db, document_id, "pending_review", "complete", f"Auto-approved (Score: {score}%)")
+            await db.execute(
+                "UPDATE documents SET status = 'approved', summary = $2 WHERE id = $1", 
+                document_id, summary
+            )
+            # Auto-lock all entities
+            await db.execute("UPDATE entities SET is_locked = true, review_status = 'approved' WHERE source_document_id = $1", document_id)
+        else:
+            # Route to HITL
+            await set_step(db, document_id, "pending_review", "pending", f"Score {score}% requires review")
+            await db.execute(
+                "UPDATE documents SET status = 'pending_review', summary = $2 WHERE id = $1", 
+                document_id, summary
+            )
         print(f"Successfully processed document {document_id}")
     except Exception as e:
         print(f"Failed to process document {document_id}: {e}")
+        # Try to extract the name of the step we failed on based on where we are, or just mark the current active step as error
+        await set_step(db, document_id, "pending_review", "error", str(e))
         await db.execute("UPDATE documents SET status = 'failed' WHERE id = $1", document_id)
 
 @router.post("/upload")
@@ -207,8 +251,20 @@ async def upload_document(
 
 @router.get("/list")
 async def list_documents(db: asyncpg.Connection = Depends(get_db)):
-    rows = await db.fetch("SELECT id, filename, type, upload_date, storage_url, status FROM documents ORDER BY upload_date DESC")
-    return [dict(r) for r in rows]
+    rows = await db.fetch("SELECT id, filename, type, upload_date, storage_url, status, current_step, step_status, step_detail, step_history FROM documents ORDER BY upload_date DESC")
+    
+    # step_history is stored as jsonb string, so we need to parse it for the frontend
+    results = []
+    for r in rows:
+        d = dict(r)
+        if d.get("step_history") and isinstance(d["step_history"], str):
+            try:
+                d["step_history"] = json.loads(d["step_history"])
+            except:
+                d["step_history"] = []
+        results.append(d)
+        
+    return results
 
 
 @router.get("/{document_id}/review")
@@ -217,14 +273,21 @@ async def get_document_review(document_id: str, db: asyncpg.Connection = Depends
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
         
-    entities = await db.fetch("SELECT id, type, name, properties, source_page FROM entities WHERE source_document_id = $1", document_id)
-    chunks = await db.fetch("SELECT id, text, page_number FROM vector_chunks WHERE document_id = $1", document_id)
+    entities = await db.fetch("""
+        SELECT id, type, name, properties, source_page, 
+               is_locked, confidence_composite, criticality, 
+               review_status, rule_violations, required_approval_level 
+        FROM entities WHERE source_document_id = $1
+    """, document_id)
+    chunks = await db.fetch("SELECT id, text, page_number, is_locked FROM vector_chunks WHERE document_id = $1", document_id)
     
     # Need to parse jsonb correctly for properties
     parsed_entities = []
     for e in entities:
         d = dict(e)
         d["properties"] = json.loads(d["properties"]) if isinstance(d["properties"], str) else d["properties"]
+        if "rule_violations" in d and d["rule_violations"]:
+            d["rule_violations"] = json.loads(d["rule_violations"]) if isinstance(d["rule_violations"], str) else d["rule_violations"]
         parsed_entities.append(d)
         
     # Calculate confidence score
@@ -236,6 +299,154 @@ async def get_document_review(document_id: str, db: asyncpg.Connection = Depends
         "chunks": [dict(c) for c in chunks],
         "confidence": confidence
     }
+
+class GlobalImproveRequest(BaseModel):
+    feedback: str
+
+@router.post("/{document_id}/improve_global")
+async def improve_global_entities(document_id: str, payload: GlobalImproveRequest, db: asyncpg.Connection = Depends(get_db)):
+    """
+    Agentic Feedback Loop (Global):
+    Takes a global instruction and updates all unlocked entities for a document.
+    """
+    doc = await db.fetchrow("SELECT id FROM documents WHERE id = $1", document_id)
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    entities = await db.fetch("SELECT id, name, type, properties FROM entities WHERE source_document_id = $1 AND is_locked = false", document_id)
+    if not entities:
+        return {"status": "success", "message": "No unlocked entities to update."}
+        
+    chunks = await db.fetch("SELECT text FROM vector_chunks WHERE document_id = $1", document_id)
+    full_text = "\n\n".join(c["text"] for c in chunks)
+    
+    current_entities_json = []
+    for e in entities:
+        props = e["properties"]
+        if isinstance(props, str):
+            props = json.loads(props)
+        current_entities_json.append({
+            "id": str(e["id"]),
+            "name": e["name"],
+            "type": e["type"],
+            "properties": props
+        })
+
+    from ingestion.extract import get_llm
+    from langchain_core.messages import HumanMessage
+    
+    prompt = f"""
+You are an industrial document analyst. The user has provided a global instruction to improve the extracted properties of the following entities.
+Review the document text (if necessary) to find the missing properties requested by the user, and apply them.
+
+Global Instruction: {payload.feedback}
+
+Current Entities (JSON):
+{json.dumps(current_entities_json, indent=2)}
+
+Document Text (reference):
+{full_text[:10000]}  # limit text length just in case
+
+Respond ONLY with a JSON array of updated entities. Each object must have "id" and the updated "properties" object. Do not change the id.
+Example:
+[
+  {{"id": "uuid-here", "properties": {{"material": "steel", "pressure": "500psi"}}}},
+  ...
+]
+Do not include markdown backticks or any other text.
+"""
+    
+    llm = get_llm()
+    try:
+        result = await llm.ainvoke([HumanMessage(content=prompt)])
+        raw_json = result.content.strip()
+        if raw_json.startswith("```json"):
+            raw_json = raw_json[7:]
+        if raw_json.startswith("```"):
+            raw_json = raw_json[3:]
+        if raw_json.endswith("```"):
+            raw_json = raw_json[:-3]
+            
+        updated_entities = json.loads(raw_json.strip())
+        
+        # Update DB
+        for ue in updated_entities:
+            await db.execute(
+                "UPDATE entities SET properties = $1 WHERE id = $2 AND source_document_id = $3",
+                json.dumps(ue["properties"]), ue["id"], document_id
+            )
+            
+        return {"status": "success"}
+    except Exception as e:
+        print(f"Failed to generate global proposal: {e}")
+        raise HTTPException(status_code=500, detail="Failed to process global improvement")
+
+class EntityImproveProposal(BaseModel):
+    feedback: str
+
+@router.post("/entity/{entity_id}/improve_proposal")
+async def improve_entity_proposal(entity_id: str, payload: EntityImproveProposal, db: asyncpg.Connection = Depends(get_db)):
+    """
+    Agentic Feedback Loop:
+    Takes an entity and human feedback, then asks the LLM to propose an improved version of the properties.
+    Returns the proposed properties without saving them.
+    """
+    entity = await db.fetchrow("SELECT type, name, properties FROM entities WHERE id = $1", entity_id)
+    if not entity:
+        raise HTTPException(status_code=404, detail="Entity not found")
+        
+    current_props = entity["properties"]
+    
+    from ingestion.extract import get_llm
+    from langchain_core.messages import HumanMessage
+    
+    prompt = f"""
+You are an AI assisting an industrial Plant Manager with data extraction. 
+The user has provided feedback to correct an extracted entity.
+Apply the user's feedback to the current properties and return ONLY a valid JSON object representing the updated properties.
+
+Entity Name: {entity['name']}
+Entity Type: {entity['type']}
+Current Properties (JSON):
+{current_props}
+
+User Feedback:
+{payload.feedback}
+
+Respond ONLY with the updated JSON object. Do not include markdown formatting or backticks.
+    """
+    
+    llm = get_llm()
+    try:
+        result = await llm.ainvoke([HumanMessage(content=prompt)])
+        # Clean up possible markdown code blocks
+        raw_json = result.content.strip()
+        if raw_json.startswith("```json"):
+            raw_json = raw_json[7:]
+        if raw_json.startswith("```"):
+            raw_json = raw_json[3:]
+        if raw_json.endswith("```"):
+            raw_json = raw_json[:-3]
+            
+        proposed_props = json.loads(raw_json.strip())
+        return {"proposed_properties": proposed_props}
+    except Exception as e:
+        print(f"Failed to generate proposal: {e}")
+        raise HTTPException(status_code=500, detail="Failed to generate AI proposal")
+
+class EntityUpdate(BaseModel):
+    properties: dict
+
+@router.put("/entity/{entity_id}")
+async def update_entity(entity_id: str, update: EntityUpdate, db: asyncpg.Connection = Depends(get_db)):
+    """
+    Saves the user-approved properties to the database.
+    """
+    await db.execute(
+        "UPDATE entities SET properties = $1, is_locked = true, review_status = 'approved' WHERE id = $2",
+        json.dumps(update.properties), entity_id
+    )
+    return {"status": "success"}
 
 @router.get("/{document_id}/confidence")
 async def get_document_confidence(document_id: str, db: asyncpg.Connection = Depends(get_db)):
@@ -302,7 +513,7 @@ async def review_action(entity_id: str, req: ReviewActionRequest, db: asyncpg.Co
 async def get_plant_manager_inbox(db: asyncpg.Connection = Depends(get_db)):
     rows = await db.fetch("""
         SELECT e.id as entity_id, e.name as equipment_tag, d.filename as document_filename, 
-               e.rule_violations
+               e.rule_violations, d.storage_url
         FROM entities e
         JOIN documents d ON e.source_document_id = d.id
         WHERE e.required_approval_level = 3 AND e.review_status = 'needs_review'
@@ -315,6 +526,7 @@ async def get_plant_manager_inbox(db: asyncpg.Connection = Depends(get_db)):
             "entity_id": str(r["entity_id"]),
             "equipment_tag": r["equipment_tag"],
             "document_filename": r["document_filename"],
+            "storage_url": r["storage_url"],
             "plain_language_summary": f"This requires Level 3 sign-off. Reason: {', '.join(violations) if violations else 'Escalated by SME'}",
             "flagged_reason": violations[0] if violations else "escalated"
         })
@@ -331,7 +543,8 @@ async def plant_manager_decide(entity_id: str, req: PlantManagerDecisionRequest,
         raise HTTPException(status_code=400, detail="Invalid decision")
         
     status = "published" if req.decision == "confirm" else "rejected"
-    await db.execute("UPDATE entities SET review_status = $1, is_locked = true WHERE id = $2", status, entity_id)
+    is_locked = True if req.decision == "confirm" else False
+    await db.execute("UPDATE entities SET review_status = $1, is_locked = $2 WHERE id = $3", status, is_locked, entity_id)
     
     return {
         "entity_id": entity_id,

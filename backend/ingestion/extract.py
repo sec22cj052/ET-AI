@@ -27,9 +27,20 @@ async def extract_entities_from_text(text: str, page_number: int) -> Dict[str, A
     llm = get_llm().with_structured_output(DocumentExtraction)
     
     prompt = f"""
-    Analyze the following industrial document text and extract key entities. 
-    Focus on Centrifugal Pumps, their components, maintenance work orders, operating procedures, and safety standards.
-    Ensure you provide confidence scores and assess criticality correctly.
+    You are a Principal Reliability Engineer and Industrial Data Architect building the core extraction engine for our hackathon solution.
+    
+    THE PROBLEM: In heavy industry, critical asset knowledge is trapped in disconnected PDFs (OEM Manuals, P&IDs, Work Orders). When an asset fails, technicians struggle because the maintenance history, operating parameters, and safety standards are siloed in different documents.
+    OUR SOLUTION: We are building an intelligent Knowledge Graph. We extract physical assets (Equipment, Components) and logical records (Standards, Work Orders, Procedures) as core ENTITIES. We then connect them to break down silos.
+
+    YOUR TASK:
+    Analyze the following industrial document text and comprehensively extract key entities (Equipment, Component, WorkOrder, Procedure, Standard).
+    For EVERY entity you extract, you MUST aggressively extract ALL associated properties, specifications, safety rules, operating limits, and dates found in the text.
+    
+    CRITICAL RULES:
+    1. Do NOT extract raw parameters, measurements, or values (e.g., "12 bar", "Rated operating pressure", "-10 C") as standalone entities. 
+    2. You MUST nest all parameters, specs, rules, dates, and measurements as key-value pairs inside the `properties` JSON object of the specific Equipment, Component, or Procedure entity they describe. Example: if a pump has a max pressure, add {{"max_pressure": "14 bar"}} to the pump's properties.
+    3. If a safety rule or compliance step applies to a component, add it to that component's properties (e.g., {{"safety_rule": "Torque to 50Nm"}}).
+    4. Ensure you provide accurate confidence scores and assess criticality correctly.
     
     Text:
     {text}

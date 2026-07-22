@@ -169,7 +169,7 @@ export default function Copilot() {
               </div>
             ) : (
               <div key={idx} className="flex flex-col items-start message-appear">
-                <div className="max-w-3xl bg-white border border-slate-100 p-5 rounded-xl rounded-tl-none shadow-sm w-full">
+                <div className="max-w-3xl hub-card p-5 rounded-tl-none w-full">
                   {/* Meta bar */}
                   <div className="flex items-center justify-between mb-3 pb-2 border-b border-slate-100">
                     <div className="flex items-center gap-2">

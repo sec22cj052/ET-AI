@@ -92,7 +92,7 @@ export default function Lessons() {
             <>
               {/* Attrition Risk Section */}
               {attritionRisk.length > 0 && (
-                <div className="bg-white border border-outline-variant rounded-xl shadow-sm p-6 mb-8">
+                <div className="hub-card p-6 mb-8">
                   <h2 className="text-headline-sm font-headline-sm text-on-surface mb-2 flex items-center gap-2">
                     <span className="material-symbols-outlined text-red-500">warning</span>
                     Knowledge Attrition Risk
@@ -123,7 +123,7 @@ export default function Lessons() {
               )}
 
               {alerts.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-20 gap-4 bg-white border border-outline-variant rounded-xl shadow-sm">
+                <div className="flex flex-col items-center justify-center py-20 gap-4 hub-card">
                   <span className="material-symbols-outlined text-primary text-5xl">check_circle</span>
                   <h2 className="text-headline-md font-headline-md text-on-surface">No Patterns Detected</h2>
                   <p className="text-body-md text-on-surface-variant text-center max-w-md">
@@ -132,7 +132,7 @@ export default function Lessons() {
                 </div>
               ) : (
                 alerts.map((alert, index) => (
-              <div key={index} className="bg-white border border-outline-variant rounded-xl shadow-sm overflow-hidden flex flex-col md:flex-row relative">
+              <div key={index} className="hub-card overflow-hidden flex flex-col md:flex-row relative">
                 {/* Visual indicator bar */}
                 <div className="w-full md:w-1.5 bg-orange-400 flex-shrink-0"></div>
                 

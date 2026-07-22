@@ -221,7 +221,7 @@ export default function Compliance() {
           <div className="flex-1 overflow-y-auto custom-scrollbar">
             <div className="p-6 space-y-6 max-w-4xl mx-auto">
               {/* Score Header */}
-              <div className="bg-white border border-outline-variant rounded-xl p-6 shadow-sm">
+              <div className="hub-card p-6">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-3">
                     <span className="material-symbols-outlined text-primary text-3xl" style={{ fontVariationSettings: "'FILL' 1" }}>verified</span>
@@ -246,7 +246,7 @@ export default function Compliance() {
 
               {/* Gaps */}
               {result.gaps?.length > 0 && (
-                <div className="bg-white border border-outline-variant rounded-xl p-6 shadow-sm">
+                <div className="hub-card p-6">
                   <h2 className="text-headline-md font-headline-md text-on-surface mb-4 flex items-center gap-2">
                     <span className="material-symbols-outlined text-red-500">report_problem</span>
                     Identified Gaps ({result.gaps.length})
@@ -282,7 +282,7 @@ export default function Compliance() {
 
               {/* Compliant Areas */}
               {result.compliant_areas?.length > 0 && (
-                <div className="bg-white border border-outline-variant rounded-xl p-6 shadow-sm">
+                <div className="hub-card p-6">
                   <h2 className="text-headline-md font-headline-md text-on-surface mb-4 flex items-center gap-2">
                     <span className="material-symbols-outlined text-lime-600">check_circle</span>
                     Compliant Areas ({result.compliant_areas.length})
@@ -303,7 +303,7 @@ export default function Compliance() {
 
               {/* Citations */}
               {citations.length > 0 && (
-                <div className="bg-white border border-outline-variant rounded-xl p-6 shadow-sm">
+                <div className="hub-card p-6">
                   <h2 className="text-headline-md font-headline-md text-on-surface mb-4 flex items-center gap-2">
                     <span className="material-symbols-outlined text-on-surface-variant">description</span>
                     Source Standards

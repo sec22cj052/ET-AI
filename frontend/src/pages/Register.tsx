@@ -58,7 +58,7 @@ export default function Register() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-surface-container-lowest py-10">
-      <div className="w-full max-w-md p-8 bg-white border border-outline-variant rounded-xl shadow-lg">
+      <div className="w-full max-w-md p-8 hub-card shadow-lg">
         <div className="flex flex-col items-center mb-6">
           <div className="w-12 h-12 bg-primary rounded-xl flex items-center justify-center text-white text-2xl mb-4">
             <span className="material-symbols-outlined">person_add</span>
