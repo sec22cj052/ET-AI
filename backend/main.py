@@ -1,5 +1,6 @@
 import os
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, HTTPException
+from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from dotenv import load_dotenv
@@ -61,6 +62,37 @@ app.include_router(compliance_router)
 app.include_router(lessons_router)
 app.include_router(tacit_router)
 
-@app.get("/")
-async def root():
-    return {"message": "Industrial Knowledge Intelligence Platform API is running"}
+# Serve the React Frontend SPA
+frontend_dist = os.path.join(os.path.dirname(__file__), "../frontend/dist")
+if os.path.isdir(frontend_dist):
+    # Mount the /assets folder from Vite
+    assets_path = os.path.join(frontend_dist, "assets")
+    if os.path.isdir(assets_path):
+        app.mount("/assets", StaticFiles(directory=assets_path), name="frontend-assets")
+        
+    # Optional: mount public folder items like vite.svg if they exist
+    # If there are other static files in dist root (like favicon.ico), 
+    # we could mount them individually or use a custom middleware. 
+    # For simplicity, we'll serve the main ones:
+    
+    @app.get("/{full_path:path}")
+    async def serve_frontend(full_path: str):
+        # Exclude known backend prefixes (if they were missed by routers)
+        if full_path.startswith("api/") or full_path.startswith("docs") or full_path.startswith("openapi.json"):
+            raise HTTPException(status_code=404, detail="Not Found")
+            
+        # Serve favicon if requested
+        if full_path == "vite.svg" or full_path.endswith(".ico") or full_path.endswith(".png") or full_path.endswith(".webmanifest"):
+            file_path = os.path.join(frontend_dist, full_path)
+            if os.path.exists(file_path):
+                return FileResponse(file_path)
+                
+        # For all other routes, serve the React index.html for SPA routing
+        index_path = os.path.join(frontend_dist, "index.html")
+        if os.path.exists(index_path):
+            return FileResponse(index_path)
+        return {"message": "Frontend build not found"}
+else:
+    @app.get("/")
+    async def root():
+        return {"message": "Industrial Knowledge Intelligence Platform API is running. (Frontend not built)"}
