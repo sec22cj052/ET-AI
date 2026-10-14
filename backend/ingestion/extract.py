@@ -59,26 +59,13 @@ async def extract_entities_from_text(text: str, page_number: int) -> Dict[str, A
                 "field_confidence": e.field_confidence
             })
             
-        # We infer relationships implicitly (equipment <-> work_order)
-        relationships = []
-        equipment = [e for e in result.entities if e.type == "Equipment"]
-        work_orders = [e for e in result.entities if e.type == "WorkOrder"]
-        for eq in equipment:
-            for wo in work_orders:
-                relationships.append({
-                    "source_name": eq.name,
-                    "target_name": wo.name,
-                    "relationship_type": "MAINTAINED_BY"
-                })
-                
         return {
             "document_type_confidence": result.document_type_confidence,
-            "entities": entities, 
-            "relationships": relationships
+            "entities": entities,
         }
     except Exception as e:
         print(f"Extraction Error on chunk: {e}")
-        return {"document_type_confidence": 0.0, "entities": [], "relationships": []}
+        return {"document_type_confidence": 0.0, "entities": []}
 
 async def extract_from_image(image_bytes: bytes, page_number: int) -> List[Dict[str, Any]]:
     """Extracts entities directly from an image (e.g., P&ID) using Gemini Vision capabilities."""

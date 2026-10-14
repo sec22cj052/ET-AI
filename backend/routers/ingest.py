@@ -8,6 +8,7 @@ from datetime import datetime
 from db.database import get_db
 from ingestion.parse import parse_pdf, parse_csv_or_excel
 from ingestion.extract import extract_entities_from_text, generate_document_summary
+from ingestion.link import link_stored_entities
 from ingestion.chunk_embed import chunk_text, embed_chunks
 from ingestion.confidence import calculate_confidence_score
 from ingestion.confidence_score import compute_entity_confidence
@@ -79,20 +80,16 @@ async def process_document_background(
             # Extract
             extracted_data = await extract_entities_from_text(text, page_num)
             entities = extracted_data["entities"]
-            relationships = extracted_data["relationships"]
-            
-            name_to_uuid = {}
-            
-            # Upsert entities (match on name to avoid duplicates in KG)
+
+            # Upsert entities (match on name to avoid duplicates in KG).
+            # Edges are not written here. The linking step does that.
             for ent in entities:
                 # Calculate confidence metrics
                 conf_data = await compute_entity_confidence(db, ent, text, extracted_data.get("document_type_confidence", 0.5))
                 
                 # Check if exists
                 existing_id = await db.fetchval("SELECT id FROM entities WHERE name = $1", ent["name"])
-                if existing_id:
-                    ent_id = existing_id
-                else:
+                if not existing_id:
                     ent_id = str(uuid.uuid4())
                     await db.execute(
                         """
@@ -109,30 +106,7 @@ async def process_document_background(
                         conf_data["criticality"], conf_data["review_status"], json.dumps(conf_data["rule_violations"]),
                         conf_data["required_approval_level"]
                     )
-                name_to_uuid[ent["name"]] = ent_id
-                
-            # Insert relationships
-            for rel in relationships:
-                source_id = name_to_uuid.get(rel["source_name"])
-                target_id = name_to_uuid.get(rel["target_name"])
-                
-                # If we couldn't resolve the UUID in this chunk, try global DB lookup
-                if not source_id:
-                    source_id = await db.fetchval("SELECT id FROM entities WHERE name = $1", rel["source_name"])
-                if not target_id:
-                    target_id = await db.fetchval("SELECT id FROM entities WHERE name = $1", rel["target_name"])
-                    
-                    if source_id and target_id:
-                        rel_id = str(uuid.uuid4())
-                        await db.execute(
-                            """
-                            INSERT INTO entity_relationships (id, source_id, target_id, relationship_type)
-                            VALUES ($1, $2, $3, $4)
-                            """,
-                            rel_id, source_id, target_id, rel["relationship_type"]
-                        )
-                
-                entity_count += len(entities)
+            entity_count += len(entities)
 
         await set_step(db, document_id, "extracting", "complete", f"{entity_count} entities found")
         
@@ -159,10 +133,10 @@ async def process_document_background(
             
         await set_step(db, document_id, "chunking", "complete", f"{chunk_count} chunks embedded")
         
-        # 4. Linking
+        # 4. Linking. Uses entities and chunk text already stored, including older documents.
         await set_step(db, document_id, "linking", "active")
-        # Linking is implicitly handled by the relationships added above, but we mark the step
-        await set_step(db, document_id, "linking", "complete", "Graph links built")
+        link_count = await link_stored_entities(db, extra_texts=[full_text])
+        await set_step(db, document_id, "linking", "complete", f"{link_count} links written")
         
         # Generate AI summary for HITL review
         summary = ""

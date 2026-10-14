@@ -4,6 +4,7 @@ import json
 from typing import List, Dict, Any
 
 from db.database import get_db
+from ingestion.link import link_stored_entities
 
 router = APIRouter(prefix="/graph", tags=["graph"])
 
@@ -166,3 +167,10 @@ async def get_entity_documents(entity_id: str, db: asyncpg.Connection = Depends(
         entity_id
     )
     return [dict(d) for d in docs]
+
+
+@router.post("/relink")
+async def relink_graph(db: asyncpg.Connection = Depends(get_db)):
+    """Write missing edges from entities and chunk text already stored."""
+    written = await link_stored_entities(db)
+    return {"links_written": written}
